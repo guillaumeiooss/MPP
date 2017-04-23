@@ -451,16 +451,24 @@ polyhedronMPP* changeOfBasis(polyhedronMPP* poly, affFuncMPP* affFunc) {
 	assert(affFunc->nInd == poly->nInd);
 	
 	// Extraction of constraints
-	int64* ineqEqPart;
-	int64** linPart;
-	int64** paramPart;
-	int64* constPart;
+	int64* ineqEqPart = (int64*) malloc(poly->nConstr * sizeof(int64));
+	int64** linPart = (int64**) malloc(poly->nConstr * sizeof(int64));
+	for (int i=0; i<poly->nConstr; i++)
+		linPart[i] = (int64*) malloc(poly->nInd * sizeof(int64));
+	int64** paramPart = (int64**) malloc(poly->nConstr * sizeof(int64));
+	for (int i=0; i<poly->nConstr; i++)
+		paramPart[i] = (int64*) malloc(poly->nParam * sizeof(int64));
+	int64* constPart = (int64*) malloc(poly->nConstr * sizeof(int64));
 	extractPoly(poly, ineqEqPart, linPart, paramPart, constPart);
 	
 	// Extraction of mat
-	int64** linPartMatAff;
-	int64** paramPartMatAff;
-	int64* constMatAff;
+	int64** linPartMatAff = (int64**) malloc(affFunc->dimOut * sizeof(int64*));
+	for (int i=0; i<affFunc->dimOut; i++)
+		linPartMatAff[i] = (int64*) malloc(affFunc->nInd * sizeof(int64));
+	int64** paramPartMatAff = (int64**) malloc(affFunc->dimOut * sizeof(int64*));
+	for (int i=0; i<affFunc->dimOut; i++)
+		paramPartMatAff[i] = (int64*) malloc(affFunc->nParam * sizeof(int64));
+	int64* constMatAff = (int64*) malloc(affFunc->dimOut * sizeof(int64));
 	extractAffFunc(affFunc, linPartMatAff, paramPartMatAff, constMatAff);
 	
 	int64** linPartMatInv = inverseMatUnimod(linPartMatAff, affFunc->dimOut, affFunc->nInd);

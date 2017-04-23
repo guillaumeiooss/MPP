@@ -2,6 +2,8 @@
 // Copyright Guillaume Iooss, 2014, All right reserved.
 
 #include "MPP_rect.h"
+#include "lexmin.h"
+
 
 void printoutDomain(list<list<polyhedronMPP*> > llDom) {
 	cout << "Intersection between the " << llDom.size() << " following union(s) of polyhedra:" << endl;
@@ -279,15 +281,80 @@ void test_LinAlg_2() {
 	printMatrix(Ainv, 2, 2);
 }
 
+/* ------------------------------------------ */
+
+void test_lexminmax_1() {
+	// Triangle {i,j | 0<=i && 0<=j && 0<=N-i-j}
+	int nInd = 2;
+	int nParam = 1;
+	int nConstr = 3;
+	
+	int64** mat = (int64**) malloc(3*sizeof(int64*));
+	for (int i=0; i<3; i++)
+		mat[i] = (int64*) malloc(5*sizeof(int64));
+	mat[0][0] = 1; mat[0][1] = 1; mat[0][2] = 0; mat[0][3] = 0; mat[0][4] = 0;
+	mat[1][0] = 1; mat[1][1] = 0; mat[1][2] = 1; mat[1][3] = 0; mat[1][4] = 0;
+	mat[1][0] = 1; mat[1][1] =-1; mat[1][2] =-1; mat[1][3] = 1; mat[1][4] = 0;
+	
+	polyhedronMPP* poly = buildPolyhedron(mat, nConstr, nInd, nParam);
+	
+	rational64** matLexMax = lexmax(poly);
+	printMatrix(matLexMax, poly->nInd, poly->nParam+1);
+	// [ 0/1 0/1 ]
+	// [ 1/1 0/1 ]
+	// => (0,N) is the lexmax
+	
+	cout << endl;
+	
+	rational64** matLexMin = lexmin(poly);
+	printMatrix(matLexMin, poly->nInd, poly->nParam+1);
+	// [ 0/1 0/1 ]
+	// [ 0/1 0/1 ]
+	// => (0,0) is the lexmin
+}
+
+void test_lexminmax_2() {
+	// Triangle {i,j | 0<=j && 0<=i-j && 0<=N-2i-j}
+	int nInd = 2;
+	int nParam = 1;
+	int nConstr = 3;
+	
+	int64** mat = (int64**) malloc(3*sizeof(int64*));
+	for (int i=0; i<3; i++)
+		mat[i] = (int64*) malloc(5*sizeof(int64));
+	mat[0][0] = 1; mat[0][1] = 0; mat[0][2] = 1; mat[0][3] = 0; mat[0][4] = 0;
+	mat[1][0] = 1; mat[1][1] = 1; mat[1][2] = -1; mat[1][3] = 0; mat[1][4] = 0;
+	mat[1][0] = 1; mat[1][1] =-2; mat[1][2] =-1; mat[1][3] = 1; mat[1][4] = 0;
+	
+	polyhedronMPP* poly = buildPolyhedron(mat, nConstr, nInd, nParam);
+	
+	rational64** matLexMin = lexmin(poly);
+	printMatrix(matLexMin, poly->nInd, poly->nParam+1);
+	// [ 0/1 0/1 ]
+	// [ 0/1 0/1 ]
+	// => (0,0) is the lexmin
+	
+	rational64** matLexMax = lexmax(poly);
+	printMatrix(matLexMax, poly->nInd, poly->nParam+1);
+	// [ 1/2 0/1 ]
+	// [ 0/1 0/1 ]
+	// => (N/2, 0) is the rational lexmax
+	
+	cout << endl;
+}
+
 
 /* ------------------------------------------ */
 
 int main() {
-	test_MPP_Poly_Ex1();
+	//test_MPP_Poly_Ex1();
 	//test_MPP_Poly_Ex2();
 	//test_MPP_Func_Ex1();
 	//test_LinAlg_1();
 	//test_LinAlg_2();
+	
+	//test_lexminmax_1();
+	test_lexminmax_2();
 	
 	return 0;
 }
