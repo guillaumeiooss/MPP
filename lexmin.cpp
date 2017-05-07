@@ -228,7 +228,6 @@ rational64** lexminmax(polyhedronMPP *poly, PipMatrix* context, bool bmax) {
 	
     // Free temporary structures
     pip_matrix_free(pipMat);
-    pip_matrix_free(context);
     pip_options_free(pipOptions);
     pip_quast_free(quastSol);
     pip_list_free(listSol);
@@ -250,7 +249,10 @@ rational64** lexminmax(polyhedronMPP *poly, bool bmax) {
 		context->p[i][1+i] = 1;
 	}
 	
-	return lexminmax(poly, context, bmax);
+	rational64** sol = lexminmax(poly, context, bmax);
+	
+	pip_matrix_free(context);
+	return sol;
 }
 
 
@@ -261,7 +263,9 @@ rational64** lexminmax(polyhedronMPP *poly, int64** context, int nrow_context, i
 			pip_context->p[i][j] = context[i][j];
 	}
 	
-	return lexminmax(poly, pip_context, bmax);
+	rational64** sol =  lexminmax(poly, pip_context, bmax);
+	pip_matrix_free(pip_context);
+	return sol;
 }
 
 /* ------------------------------------------------------- */
@@ -283,5 +287,99 @@ rational64** lexmax(polyhedronMPP *poly, int64** context, int nrow_context, int 
 rational64** lexmin(polyhedronMPP *poly, int64** context, int nrow_context, int ncol_context) {
 	return lexminmax(poly, context, nrow_context, ncol_context, false);
 }
+
+
+/* ------------------------------------------------------- */
+// Getting the max/min functions from the lexmax/lexmin functions
+
+
+// Aux function which builds {x,z | x \in dom && z = obj(x) }
+polyhedronMPP* build_lexminmax_poly(affFuncMPP *obj, polyhedronMPP *dom) {
+	assert(dom->nParam=obj->nParam);
+	assert(dom->nInd=obj->nInd);
+	
+	int nConstrDom = dom->nConstr;
+	int nParam = dom->nParam;
+	int dim_x = dom->nInd;
+	int dim_z = obj->dimOut;
+	int64** matDom = dom->polyScalar;
+	int64** matFun = obj->affFuncScalar;
+	
+	int nRow_matConstr = nConstrDom + dim_z;
+	int nCol_matConstr = 2+dim_x+dim_z+nParam;
+	int64** matConstr = (int64**) malloc(nRow_matConstr * sizeof(int64*));
+	for (int i=0; i<nRow_matConstr; i++)
+		matConstr[i] = (int64*) malloc(nCol_matConstr * sizeof(int64));
+	
+	// First lines: "x \in dom"
+	for (int i=0; i<nConstrDom; i++) {
+		matConstr[i][0] = matDom[i][0];
+		for (int j=0; j<dim_x; j++)
+			matConstr[i][1+j] = matDom[i][1+j];
+		for (int j=0; j<nParam; j++)
+			matConstr[i][1+dim_x+dim_z+j] = matDom[i][1+dim_x+j]; 
+		matConstr[i][nCol_matConstr-1] = matDom[i][1+dim_x+nParam];
+	}
+	
+	// Second lines: "obj(x) - z = 0"
+	for (int i=0; i<dim_z; i++) {
+		// Equality: the first column is "0"s
+		for (int j=0; j<dim_x; j++)
+			matConstr[nConstrDom+i][1+j] = matFun[i][j];
+		matConstr[nConstrDom+i][1+dim_x+i] = -1;
+		for (int j=0; j<nParam; j++)
+			matConstr[nConstrDom+i][1+dim_x+dim_z+j] = matFun[i][dim_x+j];
+		matConstr[nConstrDom+i][nCol_matConstr-1] = matFun[i][dim_x+nParam];
+	}
+	
+	polyhedronMPP* retPoly = buildPolyhedron(matConstr, nRow_matConstr, dim_x+dim_z, nParam);
+	
+	return retPoly;
+}
+
+// Project the found rational solution on the nInd first dimensions
+rational64** project_sol(rational64** sol_lex, int nIndProj, int nCol_sol_lex) {
+	rational64** retSol = (rational64**) malloc(nIndProj * sizeof(rational64*));
+	for (int i=0; i<nIndProj; i++)
+		retSol[i] = (rational64*) malloc(nCol_sol_lex * sizeof(rational64));
+	
+	for (int i=0; i<nIndProj; i++)
+		for (int j=0; j<nCol_sol_lex; j++)
+			retSol[i][j] = sol_lex[i][j];
+	
+	return retSol;
+}
+
+
+rational64** max(affFuncMPP *obj, polyhedronMPP *dom) {
+	// max_{x \in dom} obj(x) = Proj_{x} lexmax({x,z | x \in dom && z = obj(x) })
+	polyhedronMPP* nPoly = build_lexminmax_poly(obj, dom);
+	rational64** sol_lex = lexmax(nPoly);
+	rational64** sol_minmax = project_sol(sol_lex, dom->nInd, dom->nParam+1);
+	
+	// Free temporary structures
+	freePolyhedron(nPoly);
+	for (int i=0; i<dom->nInd + obj->dimOut; i++)
+		free(sol_lex[i]);
+	free(sol_lex);
+	
+	return sol_minmax;
+}
+
+rational64** min(affFuncMPP *obj, polyhedronMPP *dom) {
+	// min_{x \in dom} obj(x) = Proj_{x} lexmin({x,z | x \in dom && z = obj(x) })
+	polyhedronMPP* nPoly = build_lexminmax_poly(obj, dom);
+	rational64** sol_lex = lexmin(nPoly);
+	rational64** sol_minmax = project_sol(sol_lex, dom->nInd, dom->nParam+1);
+	
+	// Free temporary structures
+	freePolyhedron(nPoly);
+	for (int i=0; i<dom->nInd + obj->dimOut; i++)
+		free(sol_lex[i]);
+	free(sol_lex);
+	
+	return sol_minmax;
+}
+
 
 

@@ -95,6 +95,9 @@ void extractPoly(polyhedronMPP* poly, int64* ineqEqPart, int64** linPart, int64*
 // Transform the equalities of the polyhedron (A=0) into 2 inequalities (A>=0 and -A>=0)
 polyhedronMPP* eliminateEqualities(polyhedronMPP* poly);
 
+// Cartesian product of two polyhedra
+polyhedronMPP* cartesianProduct(polyhedronMPP* poly1, polyhedronMPP* poly2);
+
 // Pretty-printer
 void printPolyhedronMPP(polyhedronMPP* poly);
 

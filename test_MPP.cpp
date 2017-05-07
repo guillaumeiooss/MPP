@@ -294,15 +294,15 @@ void test_lexminmax_1() {
 		mat[i] = (int64*) malloc(5*sizeof(int64));
 	mat[0][0] = 1; mat[0][1] = 1; mat[0][2] = 0; mat[0][3] = 0; mat[0][4] = 0;
 	mat[1][0] = 1; mat[1][1] = 0; mat[1][2] = 1; mat[1][3] = 0; mat[1][4] = 0;
-	mat[1][0] = 1; mat[1][1] =-1; mat[1][2] =-1; mat[1][3] = 1; mat[1][4] = 0;
+	mat[2][0] = 1; mat[2][1] =-1; mat[2][2] =-1; mat[2][3] = 1; mat[2][4] = 0;
 	
 	polyhedronMPP* poly = buildPolyhedron(mat, nConstr, nInd, nParam);
 	
 	rational64** matLexMax = lexmax(poly);
 	printMatrix(matLexMax, poly->nInd, poly->nParam+1);
-	// [ 0/1 0/1 ]
 	// [ 1/1 0/1 ]
-	// => (0,N) is the lexmax
+	// [ 0/1 0/1 ]
+	// => (N,0) is the lexmax
 	
 	cout << endl;
 	
@@ -324,7 +324,7 @@ void test_lexminmax_2() {
 		mat[i] = (int64*) malloc(5*sizeof(int64));
 	mat[0][0] = 1; mat[0][1] = 0; mat[0][2] = 1; mat[0][3] = 0; mat[0][4] = 0;
 	mat[1][0] = 1; mat[1][1] = 1; mat[1][2] = -1; mat[1][3] = 0; mat[1][4] = 0;
-	mat[1][0] = 1; mat[1][1] =-2; mat[1][2] =-1; mat[1][3] = 1; mat[1][4] = 0;
+	mat[2][0] = 1; mat[2][1] =-2; mat[2][2] =-1; mat[2][3] = 1; mat[2][4] = 0;
 	
 	polyhedronMPP* poly = buildPolyhedron(mat, nConstr, nInd, nParam);
 	
@@ -343,6 +343,42 @@ void test_lexminmax_2() {
 	cout << endl;
 }
 
+void test_minmax_1() {
+	// Triangle {i,j | 0<=i && 0<=j && 0<=N-i-j}
+	// Objective function: max (2i+j)
+	int nInd = 2;
+	int nParam = 1;
+	int nConstr = 3;
+	
+	// poly = {i,j | 0<=i && 0<=j && 0<=N-i-j}
+	int nConstr_mat = 3;
+	int nCol_mat = nInd+nParam+2;
+	int64** mat = (int64**) malloc(nConstr_mat*sizeof(int64*));
+	for (int i=0; i<nConstr_mat; i++)
+		mat[i] = (int64*) malloc(nCol_mat*sizeof(int64));
+	mat[0][0] = 1; mat[0][1] = 1; mat[0][2] = 0; mat[0][3] = 0; mat[0][4] = 0;
+	mat[1][0] = 1; mat[1][1] = 0; mat[1][2] = 1; mat[1][3] = 0; mat[1][4] = 0;
+	mat[2][0] = 1; mat[2][1] =-1; mat[2][2] =-1; mat[2][3] = 1; mat[2][4] = 0;
+	
+	polyhedronMPP* poly = buildPolyhedron(mat, nConstr, nInd, nParam);
+	
+	// obj = (i,j-> 2i+j)
+	int nRow_matObj = 1;
+	int nCol_matObj = nInd+nParam+1;
+	int64** matObj = (int64**) malloc(nRow_matObj*sizeof(int64*));
+	for (int i=0; i<nRow_matObj; i++)
+		matObj[i] = (int64*) malloc(nCol_matObj*sizeof(int64));
+	matObj[0][0] = 2; matObj[0][1] = 1; matObj[0][2] = 0; matObj[0][3] = 0;
+	
+	affFuncMPP* obj = buildAffineFunction(matObj, 1, nInd, nParam);
+	
+	rational64** matLexMax = max(obj, poly);
+	printMatrix(matLexMax, poly->nInd, poly->nParam+1);
+	// [ 1/1 0/1 ]
+	// [ 0/1 0/1 ]
+	// => maximum reached at (N,0)
+}
+
 
 /* ------------------------------------------ */
 
@@ -352,9 +388,10 @@ int main() {
 	//test_MPP_Func_Ex1();
 	//test_LinAlg_1();
 	//test_LinAlg_2();
-	
 	//test_lexminmax_1();
-	test_lexminmax_2();
+	//test_lexminmax_2();
+	
+	test_minmax_1();
 	
 	return 0;
 }

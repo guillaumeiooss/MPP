@@ -404,6 +404,67 @@ polyhedronMPP* eliminateEqualities(polyhedronMPP* poly) {
 }
 
 
+polyhedronMPP* cartesianProduct(polyhedronMPP* poly1, polyhedronMPP* poly2) {
+	assert(poly1->nParam==poly2->nParam);
+	
+	int nInd1 = poly1->nInd;
+	int nInd2 = poly2->nInd;
+	int nParam = poly1->nParam;
+	int nConstr1 = poly1->nConstr;
+	int nConstr2 = poly2->nConstr;
+	
+	// Extracting the information from both polyhedra
+	int64* ineqEqPart1 = (int64*) malloc(nConstr1 * sizeof(int64));
+	int64** linPart1 = (int64**) malloc(nConstr1 * sizeof(int64*));
+	for (int i=0; i<nConstr1; i++)
+		linPart1[i] = (int64*) malloc(nInd1 * sizeof(int64));
+	int64** paramPart1 = (int64**) malloc(nConstr1 * sizeof(int64*));
+	for (int i=0; i<nConstr1; i++)
+		paramPart1[i] = (int64*) malloc(nParam * sizeof(int64));
+	int64* constPart1 = (int64*) malloc(nConstr1 * sizeof(int64));
+	extractPoly(poly1, ineqEqPart1, linPart1, paramPart1, constPart1);
+	
+	int64* ineqEqPart2 = (int64*) malloc(nConstr2 * sizeof(int64));
+	int64** linPart2 = (int64**) malloc(nConstr2 * sizeof(int64*));
+	for (int i=0; i<nConstr2; i++)
+		linPart2[i] = (int64*) malloc(nInd2 * sizeof(int64));
+	int64** paramPart2 = (int64**) malloc(nConstr2 * sizeof(int64*));
+	for (int i=0; i<nConstr2; i++)
+		paramPart2[i] = (int64*) malloc(nParam * sizeof(int64));
+	int64* constPart2 = (int64*) malloc(nConstr2 * sizeof(int64));
+	extractPoly(poly2, ineqEqPart2, linPart2, paramPart2, constPart2);
+	
+	
+	// Building the cartesian product of both polyhedra
+	int nConstrProd = nConstr1 + nConstr2;
+	int nIndProd = nInd1 + nInd2;
+	int nColumnProd = 2+nParam+nIndProd;
+	
+	int64** matProd = (int64**) malloc(nConstrProd * sizeof(int64*));
+	for (int i=0; i<nConstrProd; i++)
+		matProd[i] = (int64*) malloc(nColumnProd * sizeof(int64));
+	
+	for (int i=0; i<nConstr1; i++) {
+		matProd[i][0] = ineqEqPart1[i];
+		for (int j=0; j<nInd1; j++)
+			matProd[i][1+j] = linPart1[i][j];
+		for (int j=0; j<nParam; j++)
+			matProd[i][1+nIndProd+j] = paramPart1[i][j];
+		matProd[i][nColumnProd-1] = constPart1[i];
+	}
+	for (int i=0; i<nConstr2; i++) {
+		matProd[nConstr1+i][0] = ineqEqPart2[i];
+		for (int j=0; j<nInd2; j++)
+			matProd[nConstr1+i][1+nInd1+j] = linPart2[i][j];
+		for (int j=0; j<nParam; j++)
+			matProd[nConstr1+i][1+nIndProd+j] = paramPart2[i][j];
+		matProd[nConstr1+i][nColumnProd-1] = constPart2[i];
+	}
+	polyhedronMPP* polyProd = buildPolyhedron(matProd, nConstrProd, nIndProd, nParam);
+	
+	return polyProd;
+}
+
 
 void extractAffFunc(affFuncMPP* affFunc, int64** linPart, int64** paramPart, int64* constPart) {
 	int nParam = affFunc->nParam;
