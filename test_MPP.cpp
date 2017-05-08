@@ -372,11 +372,15 @@ void test_minmax_1() {
 	
 	affFuncMPP* obj = buildAffineFunction(matObj, 1, nInd, nParam);
 	
-	rational64** matLexMax = max(obj, poly);
-	printMatrix(matLexMax, poly->nInd, poly->nParam+1);
+	rational64** matArgMax = argmax(obj, poly);
+	printMatrix(matArgMax, poly->nInd, poly->nParam+1);
 	// [ 1/1 0/1 ]
 	// [ 0/1 0/1 ]
 	// => maximum reached at (N,0)
+	
+	rational64** matMax = max(obj, poly);
+	printMatrix(matMax, obj->dimOut, poly->nParam+1);
+	// [ 2/1 0/1 ]
 }
 
 

@@ -29,7 +29,10 @@ rational64** lexmin(polyhedronMPP *poly, int64** context, int nrow_context, int 
 
 
 // Adaptation of the lexmax/min functions to max/min functions
+rational64** argmax(affFuncMPP *obj, polyhedronMPP *dom);
 rational64** max(affFuncMPP *obj, polyhedronMPP *dom);
+
+rational64** argmin(affFuncMPP *obj, polyhedronMPP *dom);
 rational64** min(affFuncMPP *obj, polyhedronMPP *dom);
 
 #endif
