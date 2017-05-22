@@ -22,8 +22,7 @@ Require Piplib (http://www.piplib.org/) to be installed
 # References
 
 @inproceedings{Iooss2014impact,
-	author = {Iooss, Guillaume and Rajopadhye, Sanjay and
-		Alias, Christophe and Zou, Yun},
+	author = {Iooss, Guillaume and Rajopadhye, Sanjay and Alias, Christophe and Zou, Yun},
 	title = {Constant Aspect Ratio Tiling},
 	booktitle = {Proceedings of the 
 	    4th International Workshop on Polyhedral Compilation Techniques},
@@ -38,10 +37,10 @@ Require Piplib (http://www.piplib.org/) to be installed
   AUTHOR = {Iooss, Guillaume},
   URL = {https://tel.archives-ouvertes.fr/tel-01370553},
   NUMBER = {2016LYSEN019},
-  SCHOOL = {Universit{\'e} de Lyon},
+  SCHOOL = {Université de Lyon},
   YEAR = {2016},
   MONTH = Jul,
-  KEYWORDS = {Polyhedral model ; Tiling ; Program equivalence ; Template recognition ; BLAS ; Mod{\`e}le poly{\'e}drique ; Tuilage ; {\'E}quivalence de programme ; Reconnaissance de template},
+  KEYWORDS = {Polyhedral model ; Tiling ; Program equivalence ; Template recognition ; BLAS ; Modèle polyédrique ; Tuilage ; équivalence de programme ; Reconnaissance de template},
   TYPE = {Theses},
   PDF = {https://tel.archives-ouvertes.fr/tel-01370553/file/IOOSS_Guillaume_2016LYSEN019_These.pdf},
   HAL_ID = {tel-01370553},

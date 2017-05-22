@@ -383,6 +383,46 @@ void test_minmax_1() {
 	// [ 2/1 0/1 ]
 }
 
+void test_shape_rect_1() {
+	int nDim = 3;
+	int64* sizes = (int64*) malloc(nDim * sizeof(int64));
+	sizes[0] = 4; sizes[1] = 2; sizes[2] = 16;
+	
+	polyhedronMPP* shape = rectangularShape(sizes, nDim);
+	printPolyhedronMPP(shape);
+	//( 1 1 0 0 0 )
+	//( 1 0 1 0 0 )
+	//( 1 0 0 1 0 )
+	//( 1 -1 0 0 4 )
+	//( 1 0 -1 0 2 )
+	//( 1 0 0 -1 16 )
+}
+
+void test_shape_para_1() {
+	int nDim = 3;
+	int64** hyperplanes = (int64**) malloc(nDim * sizeof(int64*));
+	for (int i=0; i<nDim; i++)
+		hyperplanes[i] = (int64*) malloc(nDim * sizeof(int64));
+	hyperplanes[0][0] =  1; hyperplanes[0][1] =  0; hyperplanes[0][2] =  0;
+	hyperplanes[1][0] = -1; hyperplanes[1][1] =  1; hyperplanes[1][2] =  0;
+	hyperplanes[2][0] =  0; hyperplanes[2][1] =  0; hyperplanes[2][2] =  1;
+	
+	int64* sizes = (int64*) malloc(nDim * sizeof(int64));
+	sizes[0] = 4; sizes[1] = 2; sizes[2] = 16;
+	
+	
+	polyhedronMPP* shape = parallelogramShape(hyperplanes, sizes, nDim);
+	printPolyhedronMPP(shape);
+	//( 1 1 -1 0 0 )
+	//( 1 0 1 0 0 )
+	//( 1 0 0 1 0 )
+	//( 1 -1 1 0 4 )
+	//( 1 0 -1 0 2 )
+	//( 1 0 0 -1 16 )
+}
+
+
+
 
 /* ------------------------------------------ */
 
@@ -390,12 +430,16 @@ int main() {
 	//test_MPP_Poly_Ex1();
 	//test_MPP_Poly_Ex2();
 	//test_MPP_Func_Ex1();
+	
 	//test_LinAlg_1();
 	//test_LinAlg_2();
+	
 	//test_lexminmax_1();
 	//test_lexminmax_2();
+	//test_minmax_1();
 	
-	test_minmax_1();
+	//test_shape_rect_1();
+	test_shape_para_1();
 	
 	return 0;
 }
