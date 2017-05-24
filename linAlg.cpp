@@ -584,54 +584,62 @@ polyhedronMPP* changeOfBasis(polyhedronMPP* poly, affFuncMPP* affFunc) {
 
 polyhedronMPP* rectangularShape(int64* sizes, int nDim) {
 	int nConstr = 2*nDim;
-	int nCol_mat = 2+nDim;
+	int nCol_mat = 2+nDim+1;
 	
 	int64** matPolyRet = (int64**) malloc(nConstr * sizeof(int64*));
 	for (int i=0; i<nConstr; i++)
 		matPolyRet[i] = (int64*) malloc(nCol_mat * sizeof(int64));
+	for (int i=0; i<nConstr; i++)
+		for (int j=0; j<nCol_mat; j++)
+			matPolyRet[i][j] = 0;
 	
 	// (First lines)
 	for (int i=0; i<nDim; i++) {
-		matPolyRet[i][0] = 1;
-		matPolyRet[i][1+i] = 1;
+		matPolyRet[i][0] = 1;					// Ineq
+		matPolyRet[i][1+i] = 1;					// Lin
 	}
 	
 	// (Second lines)
 	for (int i=0; i<nDim; i++) {
-		matPolyRet[nDim+i][0] = 1;
-		matPolyRet[nDim+i][1+i] = -1;
-		matPolyRet[nDim+i][1+nDim] = sizes[i];
+		matPolyRet[nDim+i][0] = 1;				// Ineq
+		matPolyRet[nDim+i][1+i] = -1;			// Lin
+		matPolyRet[nDim+i][1+nDim] = sizes[i];	// Param "b"
+		matPolyRet[nDim+i][1+nDim+1] = -1;		// Const
 	}
 	
-	polyhedronMPP* polyRet = buildPolyhedron(matPolyRet, nConstr, nDim, 0);
+	polyhedronMPP* polyRet = buildPolyhedron(matPolyRet, nConstr, nDim, 1);
 	return polyRet;
 }
 
 
 polyhedronMPP* parallelogramShape(int64** hyperplanes, int64* sizes, int nDim) {
 	int nConstr = 2*nDim;
-	int nCol_mat = 2+nDim;
+	int nCol_mat = 2+nDim+1;
 	
 	int64** matPolyRet = (int64**) malloc(nConstr * sizeof(int64*));
 	for (int i=0; i<nConstr; i++)
 		matPolyRet[i] = (int64*) malloc(nCol_mat * sizeof(int64));
+	for (int i=0; i<nConstr; i++)
+		for (int j=0; j<nCol_mat; j++)
+			matPolyRet[i][j] = 0;
 	
 	// (First lines)
 	for (int i=0; i<nDim; i++) {
-		matPolyRet[i][0] = 1;
+		matPolyRet[i][0] = 1;									// Ineq
 		for (int j=0; j<nDim; j++)
-			matPolyRet[i][1+j] = hyperplanes[j][i];
+			matPolyRet[i][1+j] = hyperplanes[j][i];				// Lin
 	}
 	
 	// (Second lines)
 	for (int i=0; i<nDim; i++) {
-		matPolyRet[nDim+i][0] = 1;
+		matPolyRet[nDim+i][0] = 1;								// Ineq
 		for (int j=0; j<nDim; j++)
-			matPolyRet[nDim+i][1+j] = -hyperplanes[j][i];
-		matPolyRet[nDim+i][1+nDim] = sizes[i];
+			matPolyRet[nDim+i][1+j] = -hyperplanes[j][i];		// Lin
+		matPolyRet[nDim+i][1+nDim] = sizes[i];					// Param "b"
+		matPolyRet[nDim+i][1+nDim+1] = -1;						// Const
 	}
 	
-	polyhedronMPP* polyRet = buildPolyhedron(matPolyRet, nConstr, nDim, 0);
+	polyhedronMPP* polyRet = buildPolyhedron(matPolyRet, nConstr, nDim, 1);
 	return polyRet;
 }
 

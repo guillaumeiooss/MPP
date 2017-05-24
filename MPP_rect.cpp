@@ -126,6 +126,9 @@ list<list<polyhedronMPP*> > getRectangularTiledDomain(polyhedronMPP *polyScalar,
 				int64** blockedConstr = (int64**) malloc(nRow_blConstr * sizeof(int64*));
 				for (int l=0; l<nRow_blConstr; l++)
 				 	blockedConstr[l] = (int64*) malloc(nColumn_blConstr * sizeof(int64));
+				for (int i=0; i<nRow_blConstr; i++)
+					for (int j=0; j<nColumn_blConstr; j++)
+						blockedConstr[i][j] = 0;
 				
 				// (First line)
 				for (int j=0; j<nInd; j++)
@@ -195,7 +198,9 @@ list<list<polyhedronMPP*> > getRectangularTiledDomain(polyhedronMPP *polyScalar,
 			int64** blockedConstr = (int64**) malloc(nRow_blConstr * sizeof(int64*));
 			for (int l=0; l<nRow_blConstr; l++)
 			 	blockedConstr[l] = (int64*) malloc(nColumn_blConstr * sizeof(int64));
-			
+			for (int i=0; i<nRow_blConstr; i++)
+				for (int j=0; j<nColumn_blConstr; j++)
+					blockedConstr[i][j] = 0;
 			
 			// (First line)
 			blockedConstr[0][0] = 1;
@@ -256,6 +261,9 @@ list<list<polyhedronMPP*> > getRectangularTiledDomain(polyhedronMPP *polyScalar,
 				int64** blockedConstr = (int64**) malloc(nRow_blConstr * sizeof(int64*));
 				for (int l=0; l<nRow_blConstr; l++)
 				 	blockedConstr[l] = (int64*) malloc(nColumn_blConstr * sizeof(int64));
+				for (int i=0; i<nRow_blConstr; i++)
+					for (int j=0; j<nColumn_blConstr; j++)
+						blockedConstr[i][j] = 0;
 				
 				// (First line)
 				for (int j=0; j<nInd; j++)
@@ -316,7 +324,9 @@ list<list<polyhedronMPP*> > getRectangularTiledDomain(polyhedronMPP *polyScalar,
 			int64** blockedConstr = (int64**) malloc(nRow_blConstr * sizeof(int64*));
 			for (int l=0; l<nRow_blConstr; l++)
 			 	blockedConstr[l] = (int64*) malloc(nColumn_blConstr * sizeof(int64));
-			
+			for (int i=0; i<nRow_blConstr; i++)
+				for (int j=0; j<nColumn_blConstr; j++)
+					blockedConstr[i][j] = 0;
 			
 			// (First line)
 			blockedConstr[0][0] = 1;
@@ -480,6 +490,9 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 		int64** inputConstrLongMat = (int64**) malloc(nRow_blConstr * sizeof(int64*));
 		for (int l=0; l<nRow_blConstr; l++)
 		 	inputConstrLongMat[l] = (int64*) malloc(nColumn_blConstr * sizeof(int64));
+		for (int i=0; i<nRow_blConstr; i++)
+				for (int j=0; j<nColumn_blConstr; j++)
+					inputConstrLongMat[i][j] = 0;
 		
 		// (First rows)
 		for (int i=0; i<dimOut; i++) {
@@ -554,6 +567,9 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 		int64** relationConstrLongMat = (int64**) malloc(nRow_relConstr * sizeof(int64*));
 		for (int l=0; l<nRow_relConstr; l++)
 		 	relationConstrLongMat[l] = (int64*) malloc(nColumn_relConstr * sizeof(int64));
+		for (int i=0; i<nRow_relConstr; i++)
+				for (int j=0; j<nColumn_relConstr; j++)
+					relationConstrLongMat[i][j] = 0;
 		
 		// (First rows)
 		for (int i=0; i<dimOut; i++) {

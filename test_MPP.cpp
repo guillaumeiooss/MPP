@@ -3,7 +3,7 @@
 
 #include "MPP_rect.h"
 #include "lexmin.h"
-
+#include "MPP_gen.h"
 
 void printoutDomain(list<list<polyhedronMPP*> > llDom) {
 	cout << "Intersection between the " << llDom.size() << " following union(s) of polyhedra:" << endl;
@@ -390,12 +390,12 @@ void test_shape_rect_1() {
 	
 	polyhedronMPP* shape = rectangularShape(sizes, nDim);
 	printPolyhedronMPP(shape);
-	//( 1 1 0 0 0 )
-	//( 1 0 1 0 0 )
-	//( 1 0 0 1 0 )
-	//( 1 -1 0 0 4 )
-	//( 1 0 -1 0 2 )
-	//( 1 0 0 -1 16 )
+	//( 1  1  0  0  0  0 )
+	//( 1  0  1  0  0  0 )
+	//( 1  0  0  1  0  0 )
+	//( 1 -1  0  0  4 -1 )
+	//( 1  0 -1  0  2 -1 )
+	//( 1  0  0 -1 16 -1 )
 }
 
 void test_shape_para_1() {
@@ -413,14 +413,56 @@ void test_shape_para_1() {
 	
 	polyhedronMPP* shape = parallelogramShape(hyperplanes, sizes, nDim);
 	printPolyhedronMPP(shape);
-	//( 1 1 -1 0 0 )
-	//( 1 0 1 0 0 )
-	//( 1 0 0 1 0 )
-	//( 1 -1 1 0 4 )
-	//( 1 0 -1 0 2 )
-	//( 1 0 0 -1 16 )
+	//( 1  1 -1  0  0  0 )
+	//( 1  0  1  0  0  0 )
+	//( 1  0  0  1  0  0 )
+	//( 1 -1  1  0  4 -1 )
+	//( 1  0 -1  0  2 -1 )
+	//( 1  0  0 -1 16 -1 )
 }
 
+
+void test_MPP_Gen_Poly_Ex1() {
+	// Example 1 (from "test_MPP_Poly_Ex1") : { i,j | N-i-j-1>=0 } with square tiles of size b*b
+	int nInd = 2;
+	int nParam = 1;
+	int nConstr = 1;
+	
+	int64** mat = (int64**) malloc(nConstr * sizeof(int64*));
+	for (int i=0; i<nConstr; i++)
+		mat[i] = (int64*) malloc((2+nInd+nParam)* sizeof(int64));
+	mat[0][0] = 1;
+	mat[0][1] = -1;
+	mat[0][2] = -1;
+	mat[0][3] = 1;
+	mat[0][4] = -1;
+	polyhedronMPP *polyScalar = buildPolyhedron(mat, nConstr, nInd, nParam);
+	
+	int64* scale = (int64*) malloc(nInd*sizeof(int64));
+	scale[0] = 1; scale[1] = 1;
+	polyhedronMPP* shape = rectangularShape(scale, nInd);
+	
+	int64** lattice = (int64**) malloc( (nInd+1) * sizeof(int64*));
+	for (int i=0; i<nInd+1; i++)
+		lattice[i] = (int64*) malloc(nInd * sizeof(int64));
+	lattice[0][0] = 1; lattice[0][1] = 0;
+	lattice[1][0] = 0; lattice[1][1] = 1;
+	lattice[2][0] = 1; lattice[2][1] = 1;
+	
+	optionMPP* opt = (optionMPP*) malloc(sizeof(optionMPP));
+	opt->kMinMaxOption = 0;
+	opt->areParamDiv = false;
+	opt->minBlSizeParam = 3;
+	
+	list<list<polyhedronMPP*> > resultDom = getTiledDomain(polyScalar, shape, lattice, opt);
+	printoutDomain(resultDom);
+	
+	
+	// TODO: debug that... :/
+	
+	
+	
+}
 
 
 
@@ -439,7 +481,9 @@ int main() {
 	//test_minmax_1();
 	
 	//test_shape_rect_1();
-	test_shape_para_1();
+	//test_shape_para_1();
+	
+	test_MPP_Gen_Poly_Ex1();
 	
 	return 0;
 }

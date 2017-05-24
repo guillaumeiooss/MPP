@@ -99,12 +99,15 @@ PipVector* merge_row_sols(PipVector* row_then, PipVector* row_else, bool bmax) {
 
 
 // Merge the solution of two branches of a quast
-PipList* merge_sols(PipList* sol_then, PipList* sol_else, bool bmax) {
-	assert((sol_then==NULL && sol_else==NULL) || (sol_then!=NULL && sol_else!=NULL));
-	
+PipList* merge_sols(PipList* sol_then, PipList* sol_else, bool bmax) {	
 	// Termination condition
 	if (sol_then==NULL && sol_else==NULL) {
 		return (PipList*) NULL;
+	}
+	assert(sol_then!=NULL);
+	if (sol_else==NULL) {	// Condition on parameters (single branch)
+		PipList* copy_then = copy_pip_list(sol_then);
+		return copy_then;
 	}
 	
 	// Recursion
@@ -205,7 +208,7 @@ rational64** lexminmax(polyhedronMPP *poly, PipMatrix* context, bool bmax) {
 	
 	// Check that there is no existential parameters
 	if (nrow_sol>0)
-		assert(listSol->vector->nb_elements==ncol_sol);
+		assert(listSol->vector->nb_elements == ncol_sol);
 	
 	rational64** sol = (rational64**) malloc(nrow_sol * sizeof(rational64*));
 	for (int i=0; i<nrow_sol; i++)
@@ -310,6 +313,9 @@ polyhedronMPP* build_lexminmax_poly(affFuncMPP *obj, polyhedronMPP *dom) {
 	int64** matConstr = (int64**) malloc(nRow_matConstr * sizeof(int64*));
 	for (int i=0; i<nRow_matConstr; i++)
 		matConstr[i] = (int64*) malloc(nCol_matConstr * sizeof(int64));
+	for (int i=0; i<nRow_matConstr; i++)
+		for (int j=0; j<nCol_matConstr; j++)
+			matConstr[i][j] = 0;
 	
 	// First lines: "x \in dom"
 	for (int i=0; i<nConstrDom; i++) {
