@@ -321,29 +321,24 @@ polyhedronMPP* build_lexminmax_poly(affFuncMPP *obj, polyhedronMPP *dom) {
 	for (int i=0; i<nConstrDom; i++) {
 		matConstr[i][0] = matDom[i][0];
 		for (int j=0; j<dim_x; j++)
-			matConstr[i][1+j] = matDom[i][1+j];
-		for (int j=0; j<dim_z; j++)
-			matConstr[i][1+dim_x+j] = 0;
+			matConstr[i][1+dim_z+j] = matDom[i][1+j];
 		for (int j=0; j<nParam; j++)
-			matConstr[i][1+dim_x+dim_z+j] = matDom[i][1+dim_x+j]; 
+			matConstr[i][1+dim_z+dim_x+j] = matDom[i][1+dim_x+j]; 
 		matConstr[i][nCol_matConstr-1] = matDom[i][1+dim_x+nParam];
 	}
 	
 	// Second lines: "obj(x) - z = 0"
 	for (int i=0; i<dim_z; i++) {
 		matConstr[nConstrDom+i][0] = 0;           // Equality
+		matConstr[nConstrDom+i][1+i] = -1;
 		for (int j=0; j<dim_x; j++)
-			matConstr[nConstrDom+i][1+j] = matFun[i][j];
-		for (int j=0; j<dim_z; j++)
-			matConstr[nConstrDom+i][1+dim_x+j] = 0;
-		matConstr[nConstrDom+i][1+dim_x+i] = -1;
+			matConstr[nConstrDom+i][1+dim_z+j] = matFun[i][j];
 		for (int j=0; j<nParam; j++)
-			matConstr[nConstrDom+i][1+dim_x+dim_z+j] = matFun[i][dim_x+j];
+			matConstr[nConstrDom+i][1+dim_z+dim_x+j] = matFun[i][dim_x+j];
 		matConstr[nConstrDom+i][nCol_matConstr-1] = matFun[i][dim_x+nParam];
 	}
 	
 	polyhedronMPP* retPoly = buildPolyhedron(matConstr, nRow_matConstr, dim_x+dim_z, nParam);
-	
 	return retPoly;
 }
 
