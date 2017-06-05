@@ -455,7 +455,8 @@ void test_MPP_Gen_Poly_Ex1() {
 	opt->minBlSizeParam = 3;
 	
 	list<list<polyhedronMPP*> > resultDom = getTiledDomain(polyScalar, shape, lattice, opt);
-	printoutDomain(resultDom);
+	// TODO DEBUG
+	//printoutDomain(resultDom);
 	
 	
 	// TODO: debug that... :/

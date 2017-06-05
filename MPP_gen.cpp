@@ -126,14 +126,11 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		int64 num_cst_max1 = coeff_cst_max1.num;
 		int64 den_cst_max1 = coeff_cst_max1.den;
 		
-		
 		// TODO DEBUG
 		cout << "num_b_max1 = " << num_b_max1 << endl;
 		cout << "den_b_max1 = " << den_b_max1 << endl;
 		cout << "num_cst_max1 = " << num_cst_max1 << endl;
 		cout << "den_cst_max1 = " << den_cst_max1 << endl;
-		
-		// TODO: suspicious numbers :/
 		
 		
 		assert(den_b_max1>0);
@@ -180,7 +177,7 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		kmax[c] = max_final;
 		
 		// DEBUG TODO
-		cout << "max1 = " << max1 << " | max2 = " << max2 << " | max3 = " << max3 << endl;
+		cout << "max1 = " << max1 << " | max2 = " << max2 << " | max3 = " << max3 << endl << endl;
 		
 		
 		// 2) Getting the minimal value of k_c
@@ -194,6 +191,15 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		int64 den_b_min1 = coeff_b_min1.den;
 		int64 num_cst_min1 = coeff_cst_min1.num;
 		int64 den_cst_min1 = coeff_cst_min1.den;
+		
+		
+		// TODO DEBUG
+		cout << "num_b_min1 = " << num_b_min1 << endl;
+		cout << "den_b_min1 = " << den_b_min1 << endl;
+		cout << "num_cst_min1 = " << num_cst_min1 << endl;
+		cout << "den_cst_min1 = " << den_cst_min1 << endl;
+		
+		// TODO: suspicious numbers
 		
 		assert(den_b_min1>0);
 		assert(den_cst_min1>0);
