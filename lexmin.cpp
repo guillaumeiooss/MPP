@@ -343,7 +343,7 @@ polyhedronMPP* build_lexminmax_poly(affFuncMPP *obj, polyhedronMPP *dom) {
 }
 
 // Project the found rational solution on the nInd first dimensions
-rational64** project_begin_sol(rational64** sol_lex, int nIndProj, int nCol_sol_lex) {
+rational64** project_begin_sol(rational64** sol_lex, int nIndProj, int nCol_sol_lex, int nRow_sol_lex) {
 	rational64** retSol = (rational64**) malloc(nIndProj * sizeof(rational64*));
 	for (int i=0; i<nIndProj; i++)
 		retSol[i] = (rational64*) malloc(nCol_sol_lex * sizeof(rational64));
@@ -375,7 +375,7 @@ rational64** argmax(affFuncMPP *obj, polyhedronMPP *dom) {
 	// max_{x \in dom} obj(x) = Proj_{x} lexmax({x,z | x \in dom && z = obj(x) })
 	polyhedronMPP* nPoly = build_lexminmax_poly(obj, dom);
 	rational64** sol_lex = lexmax(nPoly);
-	rational64** sol_minmax = project_begin_sol(sol_lex, dom->nInd, dom->nParam+1);
+	rational64** sol_minmax = project_end_sol(sol_lex, dom->nInd, dom->nParam+1, dom->nInd+obj->dimOut);
 	
 	// Free temporary structures
 	freePolyhedron(nPoly);
@@ -390,7 +390,7 @@ rational64** argmin(affFuncMPP *obj, polyhedronMPP *dom) {
 	// min_{x \in dom} obj(x) = Proj_{x} lexmin({x,z | x \in dom && z = obj(x) })
 	polyhedronMPP* nPoly = build_lexminmax_poly(obj, dom);
 	rational64** sol_lex = lexmin(nPoly);
-	rational64** sol_minmax = project_begin_sol(sol_lex, dom->nInd, dom->nParam+1);
+	rational64** sol_minmax = project_end_sol(sol_lex, dom->nInd, dom->nParam+1, dom->nInd+obj->dimOut);
 	
 	// Free temporary structures
 	freePolyhedron(nPoly);
@@ -405,7 +405,7 @@ rational64** max(affFuncMPP *obj, polyhedronMPP *dom) {
 	// max_{x \in dom} obj(x) = Proj_{x} lexmax({x,z | x \in dom && z = obj(x) })
 	polyhedronMPP* nPoly = build_lexminmax_poly(obj, dom);
 	rational64** sol_lex = lexmax(nPoly);
-	rational64** sol_minmax = project_end_sol(sol_lex, obj->dimOut, dom->nParam+1, dom->nInd+obj->dimOut);
+	rational64** sol_minmax = project_begin_sol(sol_lex, obj->dimOut, dom->nParam+1, dom->nInd+obj->dimOut);
 	
 	// Free temporary structures
 	freePolyhedron(nPoly);
@@ -420,7 +420,7 @@ rational64** min(affFuncMPP *obj, polyhedronMPP *dom) {
 	// min_{x \in dom} obj(x) = Proj_{x} lexmin({x,z | x \in dom && z = obj(x) })
 	polyhedronMPP* nPoly = build_lexminmax_poly(obj, dom);
 	rational64** sol_lex = lexmin(nPoly);
-	rational64** sol_minmax = project_end_sol(sol_lex, obj->dimOut, dom->nParam+1, dom->nInd+obj->dimOut);
+	rational64** sol_minmax = project_begin_sol(sol_lex, obj->dimOut, dom->nParam+1, dom->nInd+obj->dimOut);
 	
 	// Free temporary structures
 	freePolyhedron(nPoly);
