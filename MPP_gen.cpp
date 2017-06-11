@@ -126,16 +126,16 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		int64 num_cst_max1 = coeff_cst_max1.num;
 		int64 den_cst_max1 = coeff_cst_max1.den;
 		
-		// TODO DEBUG
-		cout << "num_b_max1 = " << num_b_max1 << endl;
-		cout << "den_b_max1 = " << den_b_max1 << endl;
-		cout << "num_cst_max1 = " << num_cst_max1 << endl;
-		cout << "den_cst_max1 = " << den_cst_max1 << endl;
-		
+		// DEBUG
+		//cout << "num_b_max1 = " << num_b_max1 << endl;
+		//cout << "den_b_max1 = " << den_b_max1 << endl;
+		//cout << "num_cst_max1 = " << num_cst_max1 << endl;
+		//cout << "den_cst_max1 = " << den_cst_max1 << endl;
 		
 		assert(den_b_max1>0);
 		assert(den_cst_max1>0);
 		
+		// max1 = max_{b} |_ num_b_max1/den_b_max1 + num_cst_max1/(b*den_cst_max1) _|
 		double max1 = ( ((double) num_b_max1) / ((double) den_b_max1) );
 		if (option->kMinMaxOption==0) {
 			// => Compute a kMin/kMax for every possible values of "b".
@@ -146,16 +146,27 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 				max1 += ( ((double) num_cst_max1) / ((double) (den_cst_max1 * option->minBlSizeParam) ) );
 			} else {
 				// b as large as possible is the best we can do
-				//		=> put the fraction at "-\epsilon". We majorate it by "0"
-				max1 += 0.0;
+				
+				// => if den_b_max1>1 (already rational), 
+				if (den_b_max1>1) {
+					// put the fraction at "-\epsilon". We majorate it by "0"
+					max1 += 0.0;
+				} else {
+					// Because the "-\epsilon" makes a difference when the rest is integer
+					// when taking the lower-bound, we have a special case here
+					max1 -= 1.0;
+				}
 			}
 		} else {
 			assert(option->kMinMaxOption==1);
-			// => Compute a tighter kMin/kMax by assuming that "b" is "very large".
+			// => Compute a tighter kMin/kMax by assuming that "b" is always "very large".
 			if (num_cst_max1>0) {
-				max1 += 0.001;		// We have an "+\epsilon" here => majorate it by "0.001"
+				max1 += 0.001;			// We have an "+\epsilon" here => majorate it by "0.001"
 			} else {
-				max1 += 0.0;		// (cf option->kMinMaxOption==0)
+				if (den_b_max1>1)		// (cf option->kMinMaxOption==0)
+					max1 += 0.0;
+				else
+					max1 -= 1.0;
 			}
 		}
 		
@@ -176,8 +187,8 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		long max_final = floor(max3);
 		kmax[c] = max_final;
 		
-		// DEBUG TODO
-		cout << "max1 = " << max1 << " | max2 = " << max2 << " | max3 = " << max3 << endl << endl;
+		// DEBUG
+		//cout << "max1 = " << max1 << " | max2 = " << max2 << " | max3 = " << max3 << endl << endl;
 		
 		
 		// 2) Getting the minimal value of k_c
@@ -192,14 +203,11 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		int64 num_cst_min1 = coeff_cst_min1.num;
 		int64 den_cst_min1 = coeff_cst_min1.den;
 		
-		
-		// TODO DEBUG
-		cout << "num_b_min1 = " << num_b_min1 << endl;
-		cout << "den_b_min1 = " << den_b_min1 << endl;
-		cout << "num_cst_min1 = " << num_cst_min1 << endl;
-		cout << "den_cst_min1 = " << den_cst_min1 << endl;
-		
-		// TODO: suspicious numbers
+		// DEBUG
+		//cout << "num_b_min1 = " << num_b_min1 << endl;
+		//cout << "den_b_min1 = " << den_b_min1 << endl;
+		//cout << "num_cst_min1 = " << num_cst_min1 << endl;
+		//cout << "den_cst_min1 = " << den_cst_min1 << endl;
 		
 		assert(den_b_min1>0);
 		assert(den_cst_min1>0);
@@ -223,7 +231,13 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 			if (num_cst_min1>0) {
 				min1 += 0.0;		// (cf option->kMinMaxOption==0)
 			} else {
-				min1 += -0.001;	// We have an "-\epsilon" here => minorate it by "0.001"
+				// We have an "-\epsilon" here => minorate it by "0.001"
+				// If the rest is integral, then the "-\epsilon" is important => special case
+				if (den_b_min1>1) {
+					min1 += -0.001;	// We have an "-\epsilon" here => minorate it by "0.001"
+				} else {
+					min1 += -1.0;
+				}
 			}
 		}
 		
@@ -243,8 +257,8 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		long min_final = floor(min3);
 		kmin[c] = min_final;
 		
-		// DEBUG TODO
-		cout << "min1 = " << min1 << " | min2 = " << min2 << " | min3 = " << min3 << endl << endl;
+		// DEBUG
+		//cout << "min1 = " << min1 << " | min2 = " << min2 << " | min3 = " << min3 << endl << endl;
 	}
 	
 	return;
@@ -365,14 +379,13 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	
 	// We consider the ith constraint (outer intersection)
 	for (int c=0; c<nConstr; c++) {
-		list<polyhedronMPP*> domIthList;
-		
 		// Iterating over the \vec{0}\leq \alpha < \vec{den_lattice}
 		vector<int> alpha(nInd);
 		for (int i=0; i<nInd; i++)
 			alpha[i] = 0;
 		
 		while (alpha[nInd-1]<=den_lattice[nInd-1]) {
+			list<polyhedronMPP*> domIthList;
 			// * Case k_c = k_c^{min}
 			//
 			// In Polylib format, the matrix of constraint is:
@@ -416,8 +429,6 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 			for (int k=0; k<nInd; k++)
 				tempScalarProd += QcLDiagdelta_den[k] * alpha[k];
 			blockedConstr[0][nColumn_blConstr-1] = delta * kmin[c] - tempScalarProd;
-			
-			free(QcLDiagdelta_den);
 			
 			// (Second lines)
 			for (int i=0; i<nConstr_shape; i++) {
@@ -571,6 +582,8 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 				polyRet->nConstrMod = nInd;
 				polyRet->modConstr = modBlockedConstr;
 				domIthList.push_back(polyRet);
+				
+				free(QcLDiagdelta_den);
 			}
 			
 			
@@ -581,9 +594,8 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 					alpha[i] = 0;
 					alpha[i+1]++;
 				}
+			resDom.push_back(domIthList);
 		}
-		
-		resDom.push_back(domIthList);
 	}
 	
 	// Free temporary structures

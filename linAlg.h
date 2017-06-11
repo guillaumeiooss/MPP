@@ -31,6 +31,8 @@ int64** copyMatrix(int64** mat, int nRow, int nCol);
 // Pretty-printer
 void printMatrix(int64** mat, int nRow, int nCol);
 
+void printVector(int64* vect, int nElem);
+
 // Get the submatrix of a matrix composed of the columns going from j1 to j2 (inclusive on j1, exclusive on j2)
 int64** submatrixColumn(int64** A, int nRowA, int nColA, int j1, int j2);
 

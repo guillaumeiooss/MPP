@@ -39,6 +39,15 @@ void printMatrix(int64** mat, int nRow, int nCol) {
 	return;
 }
 
+void printVector(int64* vect, int nElem) {
+	cout << "[ ";
+	for (int j=0; j<nElem; j++) {
+		cout << vect[j] << " ";
+	}
+	cout << "]" << endl;
+	return;
+}
+
 
 
 // Extract a submatrix made of columns
