@@ -455,13 +455,34 @@ void test_MPP_Gen_Poly_Ex1() {
 	opt->minBlSizeParam = 3;
 	
 	list<list<polyhedronMPP*> > resultDom = getTiledDomain(polyScalar, shape, lattice, opt);
-	// TODO DEBUG
 	printoutDomain(resultDom);
-	
-	
-	// TODO: debug that... :/
-	
-	
+	// RESULT: Intersection of 1 union of 3 polyhedra:
+	//(0/1 | alpha beta | ii jj | Nbl Nloc | b | cnst)    // 0 = equality / 1 = inequality
+	//( 1 | -1 -1 |  0  0 | 1 0 | 0 | -2 )
+	//( 1 |  0  0 |  1  0 | 0 0 | 0 |  0 )
+	//( 1 |  0  0 |  0  1 | 0 0 | 0 |  0 )
+	//( 1 |  0  0 | -1  0 | 0 0 | 1 | -1 )
+	//( 1 |  0  0 |  0 -1 | 0 0 | 1 | -1 )
+	//( 1 |  0  0 |  0  0 | 0 0 | 1 | -3 )
+	//		=> {alpha,beta, ii,jj | alpha+beta<=Nbl-2 && 0<=(ii,jj)<b && b>=3}
+	// and
+	//( 0 | -1 -1 |  0  0 |  1 0 | 0 | -1 )
+	//( 1 |  0  0 | -1 -1 |  0 1 | 1 | -1 )
+	//( 1 |  0  0 |  1  0 |  0 0 | 0 |  0 )
+	//( 1 |  0  0 |  0  1 |  0 0 | 0 |  0 )
+	//( 1 |  0  0 | -1  0 |  0 0 | 1 | -1 )
+	//( 1 |  0  0 |  0 -1 |  0 0 | 1 | -1 )
+	//( 1 |  0  0 |  0  0 |  0 0 | 1 | -3 )
+	//		 => {alpha,beta, ii,jj | alpha+beta=Nbl-1 && Nloc+b-1>=ii+jj && 0<=(ii,jj)<b && b>=3}
+	// and
+	//( 0 | -1 -1 |  0  0 | 1 0 | 0 |  0 )
+	//( 1 |  0  0 | -1 -1 | 0 1 | 0 | -1 )
+	//( 1 |  0  0 |  1  0 | 0 0 | 0 |  0 )
+	//( 1 |  0  0 |  0  1 | 0 0 | 0 |  0 )
+	//( 1 |  0  0 | -1  0 | 0 0 | 1 | -1 )
+	//( 1 |  0  0 |  0 -1 | 0 0 | 1 | -1 )
+	//( 1 |  0  0 |  0  0 | 0 0 | 1 | -3 )
+	//		=> {alpha,beta, ii,jj | alpha+beta=Nbl && Nloc-1>=ii+jj && 0<=(ii,jj)<b && b>=3}
 	
 }
 

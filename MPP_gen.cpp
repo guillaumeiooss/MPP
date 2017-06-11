@@ -364,7 +364,7 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	    ineqEqPart_shape, linPart_shape, paramPart_shape, constPart_shape, nConstr_shape,
 	    int_lattice, den_lattice, option);
 	
-	//* TODO DEBUG - kmin / kmax
+	/* DEBUG - kmin / kmax
 	cout << "DEBUG: kmin - kmax" << endl;
 	for (int i=0; i<nConstr; i++)
 		cout << "kmin[" << i << "] = " << kmin[i] << "  |  kmax[" << i << "] = " << kmax[i] << endl;
@@ -380,11 +380,11 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	// We consider the ith constraint (outer intersection)
 	for (int c=0; c<nConstr; c++) {
 		// Iterating over the \vec{0}\leq \alpha < \vec{den_lattice}
-		vector<int> alpha(nInd);
+		int64* alpha = (int64*) malloc(nInd * sizeof(int64));
 		for (int i=0; i<nInd; i++)
 			alpha[i] = 0;
 		
-		while (alpha[nInd-1]<=den_lattice[nInd-1]) {
+		while (alpha[nInd-1]<den_lattice[nInd-1]) {
 			list<polyhedronMPP*> domIthList;
 			// * Case k_c = k_c^{min}
 			//
@@ -522,7 +522,6 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 					for (int j=0; j<nColumn_blConstr; j++)
 						blockedConstr[i][j] = 0;
 				
-				
 				// (First line)
 				// Note: QcLDiagdelta_den already computed for the case kc=kmin
 				// tempScalarProd also already computed
@@ -582,20 +581,19 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 				polyRet->nConstrMod = nInd;
 				polyRet->modConstr = modBlockedConstr;
 				domIthList.push_back(polyRet);
-				
-				free(QcLDiagdelta_den);
 			}
-			
+			free(QcLDiagdelta_den);
 			
 			// We increase the multi-dimensional iterator, starting from the first dimension and propagating the overflows
 			alpha[0]++;
 			for (int i=0; i<nInd-1; i++)
-				if (alpha[i]>den_lattice[i]) {
+				if (alpha[i]>=den_lattice[i]) {
 					alpha[i] = 0;
 					alpha[i+1]++;
 				}
 			resDom.push_back(domIthList);
 		}
+		free(alpha);
 	}
 	
 	// Free temporary structures
