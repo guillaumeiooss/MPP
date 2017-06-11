@@ -43,7 +43,6 @@ int64 ppcm_array(int64* elems, int nelem) {
 }
 
 
-
 // ---------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------
@@ -264,9 +263,6 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 	return;
 }
 
-
-
-
 // Polyhedral case
 list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedronMPP *shape, int64** lattice, optionMPP *option) {
 	// Assertions
@@ -376,11 +372,11 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	//			of considering each one of its component independently.
 	//		Benefits: less empty polyhedron to remove from the resulting union
 	//			However, it complexifies the algorithm
+	int64* alpha = (int64*) malloc(nInd * sizeof(int64));
 	
 	// We consider the ith constraint (outer intersection)
 	for (int c=0; c<nConstr; c++) {
 		// Iterating over the \vec{0}\leq \alpha < \vec{den_lattice}
-		int64* alpha = (int64*) malloc(nInd * sizeof(int64));
 		for (int i=0; i<nInd; i++)
 			alpha[i] = 0;
 		
@@ -593,7 +589,6 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 				}
 			resDom.push_back(domIthList);
 		}
-		free(alpha);
 	}
 	
 	// Free temporary structures
@@ -605,8 +600,8 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	
 	freePolyhedron(shape_noEq);
 	free(ineqEqPart_shape);
-	freeMatrix(linPart_shape, nConstr);
-	freeMatrix(paramPart_shape, nConstr);
+	freeMatrix(linPart_shape, nConstr_shape);
+	freeMatrix(paramPart_shape, nConstr_shape);
 	free(constPart_shape);
 	
 	freeMatrix(int_lattice, nInd);
@@ -616,6 +611,7 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	
 	free(kmax);
 	free(kmin);
+	free(alpha);
 	
 	return resDom;
 }
@@ -625,9 +621,220 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 // ---------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------
 
+// Auxilliary function for the affine function case
+void get_kmaxkmin_func(long* kmax, long* kmin,
+		int64** linPart, int64** paramPart, int64* constPart, int nDimOut, int nInd, int nParam,
+		int64* ineqEqPart_shape, int64** linPart_shape, int64** paramPart_shape, int64* constPart_shape, int nConstr_shape,
+		int64* ineqEqPart_shapeIm, int64** linPart_shapeIm, int64** paramPart_shapeIm, int64* constPart_shapeIm, int nConstr_shapeIm,
+		int64** int_lattice, int64* den_lattice, int64** int_latticeIm, int64* den_latticeIm, optionMPP* option) {
+	
+	// TODO
+	
+	return;
+}
+
+
+
 // Affine function case
-
-
-// TODO: affine function part
+map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScalar,
+			polyhedronMPP *shape, int64** lattice,
+			polyhedronMPP *shapeIm, int64** latticeIm,
+			optionMPP *option) {
+	
+	// Assertions
+	assert(option->minBlSizeParam>=1);
+	assert(affScalar->nInd==shape->nInd);
+	assert(affScalar->dimOut==shapeIm->nInd);
+	assert(shape->nParam==1);			// Only the block parameter
+	assert(shapeIm->nParam==1);			// Only the block parameter
+	
+	int nParam = affScalar->nParam;
+	int nInd = affScalar->nInd;
+	int nDimOut = affScalar->dimOut;
+	
+	// DEBUG
+	//cout << "nInd = " << nInd << " | nParam = " << nParam << " | nDimOut = " << nDimOut << endl;
+	
+	
+	// Returned data structure
+	map<polyhedronMPP*, affFuncMPP*> result;
+	
+	// Special case: image dimension is of dimension 0
+	if (affScalar->dimOut==0) {
+		int64** matConst = (int64**) malloc(1 * sizeof(int64*));
+		matConst[0] = (int64*) malloc( (3 + 2*affScalar->nInd + 2*affScalar->nParam) * sizeof(int64));
+		polyhedronMPP* nullPoly = buildPolyhedron(matConst, 1, 2*affScalar->nInd, 2*affScalar->nParam+1);
+		
+		int64** matAffFunc = (int64**) malloc(0 * sizeof(int64*));
+		affFuncMPP* affFunc = buildAffineFunction(matAffFunc, 0, 2*affScalar->nInd, 2*affScalar->nParam+1);
+		
+		result.insert ( pair<polyhedronMPP*, affFuncMPP*>(nullPoly, affFunc) );
+		return result;
+	}
+	
+	// Extraction of the informations
+	int64** linPart = (int64**) malloc(nDimOut * sizeof(int64*));
+	for (int i=0; i<nDimOut; i++)
+		linPart[i] = (int64*) malloc(nInd * sizeof(int64));
+	int64** paramPart = (int64**) malloc(nDimOut * sizeof(int64*));
+	for (int i=0; i<nDimOut; i++)
+		paramPart[i] = (int64*) malloc(nParam * sizeof(int64));
+	int64* constPart = (int64*) malloc(nDimOut * sizeof(int64));
+	extractAffFunc(affScalar, linPart, paramPart, constPart);
+	
+	// Extraction of the information from the polyhedral shape for the input space
+	polyhedronMPP* shape_noEq = eliminateEqualities(shape);
+	int nConstr_shape = shape_noEq->nConstr;
+	
+	int64* ineqEqPart_shape = (int64*) malloc(nConstr_shape * sizeof(int64));
+	int64** linPart_shape = (int64**) malloc(nConstr_shape * sizeof(int64*));
+	for (int i=0; i<nConstr_shape; i++)
+		linPart_shape[i] = (int64*) malloc(nInd * sizeof(int64));
+	int64** paramPart_shape = (int64**) malloc(nConstr_shape * sizeof(int64*));
+	for (int i=0; i<nConstr_shape; i++)
+		paramPart_shape[i] = (int64*) malloc(1 * sizeof(int64));
+	int64* constPart_shape = (int64*) malloc(nConstr_shape * sizeof(int64));
+	extractPoly(shape_noEq, ineqEqPart_shape, linPart_shape, paramPart_shape, constPart_shape);
+	
+	// Extraction of the information from the lattice of tile origin for the input space
+	int64** int_lattice = (int64**) malloc(nInd * sizeof(int64*));
+	for (int i=0; i<nInd; i++)
+		int_lattice[i] = (int64*) malloc(nInd * sizeof(int64));
+	int64* den_lattice = (int64*) malloc(nInd * sizeof(int64));
+	for (int i=0; i<nInd; i++)
+		for (int j=0; j<nInd; j++)
+			int_lattice[i][j] = lattice[i][j];
+	for (int j=0; j<nInd; j++)
+		den_lattice[j] = lattice[nInd][j];
+	
+	// \delta = ppcm(den_lattice[..])
+	int64 delta = ppcm_array(den_lattice, nInd);
+	int64* delta_den = (int64*) malloc(nInd * sizeof(int64));
+	for (int i=0; i<nInd; i++)
+		delta_den[i] = delta / den_lattice[i];
+	
+	// LDiagdelta_den = int_lattice * Diag(delta_den)
+	int64** LDiagdelta_den = (int64**) malloc(nInd * sizeof(int64));
+	for (int i=0; i<nInd; i++)
+		LDiagdelta_den[i] = (int64*) malloc(nInd * sizeof(int64));
+	for (int i=0; i<nInd; i++)
+		for (int j=0; j<nInd; j++)
+			LDiagdelta_den[i][j] = int_lattice[i][j] * delta_den[j];
+	
+	// Extraction of the information from the polyhedral shape for the output space
+	polyhedronMPP* shapeIm_noEq = eliminateEqualities(shapeIm);
+	int nConstr_shapeIm = shapeIm_noEq->nConstr;
+	
+	int64* ineqEqPart_shapeIm = (int64*) malloc(nConstr_shapeIm * sizeof(int64));
+	int64** linPart_shapeIm = (int64**) malloc(nConstr_shapeIm * sizeof(int64*));
+	for (int i=0; i<nConstr_shapeIm; i++)
+		linPart_shapeIm[i] = (int64*) malloc(nDimOut * sizeof(int64));
+	int64** paramPart_shapeIm = (int64**) malloc(nConstr_shapeIm * sizeof(int64*));
+	for (int i=0; i<nConstr_shapeIm; i++)
+		paramPart_shapeIm[i] = (int64*) malloc(1 * sizeof(int64));
+	int64* constPart_shapeIm = (int64*) malloc(nConstr_shapeIm * sizeof(int64));
+	extractPoly(shapeIm_noEq, ineqEqPart_shapeIm, linPart_shapeIm, paramPart_shapeIm, constPart_shapeIm);
+	
+	// Extraction of the information from the lattice of tile origin for the output space
+	int64** int_latticeIm = (int64**) malloc(nDimOut * sizeof(int64*));
+	for (int i=0; i<nDimOut; i++)
+		int_lattice[i] = (int64*) malloc(nDimOut * sizeof(int64));
+	int64* den_latticeIm = (int64*) malloc(nDimOut * sizeof(int64));
+	for (int i=0; i<nDimOut; i++)
+		for (int j=0; j<nDimOut; j++)
+			int_latticeIm[i][j] = latticeIm[i][j];
+	for (int j=0; j<nDimOut; j++)
+		den_latticeIm[j] = latticeIm[nInd][j];
+	
+	
+	// \deltaIm = ppcm(den_latticeIm[..])
+	int64 deltaIm = ppcm_array(den_latticeIm, nDimOut);
+	int64* delta_denIm = (int64*) malloc(nDimOut * sizeof(int64));
+	for (int i=0; i<nDimOut; i++)
+		delta_denIm[i] = deltaIm / den_latticeIm[i];
+	
+	// LDiagdelta_denIm = int_latticeIm * Diag(delta_denIm)
+	int64** LDiagdelta_denIm = (int64**) malloc(nDimOut * sizeof(int64));
+	for (int i=0; i<nDimOut; i++)
+		LDiagdelta_denIm[i] = (int64*) malloc(nDimOut * sizeof(int64));
+	for (int i=0; i<nDimOut; i++)
+		for (int j=0; j<nDimOut; j++)
+			LDiagdelta_denIm[i][j] = int_latticeIm[i][j] * delta_denIm[j];
+	
+	
+	// Computation of kmin/kmax
+	long* kmax = (long*) malloc(nDimOut * sizeof(long));
+	long* kmin = (long*) malloc(nDimOut * sizeof(long));
+	for (int i=0; i<nDimOut; i++) {
+		kmin[i] = 0;
+		kmax[i] = 0;
+	}
+	
+	get_kmaxkmin_func(kmax, kmin, linPart, paramPart, constPart, nDimOut, nInd, nParam,
+	    ineqEqPart_shape, linPart_shape, paramPart_shape, constPart_shape, nConstr_shape,
+	    ineqEqPart_shapeIm, linPart_shapeIm, paramPart_shapeIm, constPart_shapeIm, nConstr_shapeIm,
+	    int_lattice, den_lattice, int_latticeIm, den_latticeIm, option);
+	
+	/* DEBUG - kmin / kmax
+	cout << "DEBUG: kmin - kmax" << endl;
+	for (int i=0; i<nDimOut; i++)
+		cout << "kmin[" << i << "] = " << kmin[i] << "  |  kmax[" << i << "] = " << kmax[i] << endl;
+	cout << endl;
+	//*/
+	
+	// Note: we are iterating over the multi-dimensional bounding box [|\vec{kmin}; \vec{kmax}|]
+	//		=> We can improve the algorithm by only iterating over the feasible \vec{k} instead
+	//			of considering each one of its component independently.
+	//		Benefits: less empty polyhedron to remove from the resulting union
+	//			However, it complexifies the algorithm
+	
+	
+	
+	
+	// TODO: iteration over the k + construction of the matrices
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	// Free temporary data structures
+	freeMatrix(linPart, nDimOut);
+	freeMatrix(paramPart, nDimOut);
+	free(constPart);
+	
+	freePolyhedron(shape_noEq);
+	free(ineqEqPart_shape);
+	freeMatrix(linPart_shape, nConstr_shape);
+	freeMatrix(paramPart_shape, nConstr_shape);
+	free(constPart_shape);
+	
+	freeMatrix(int_lattice, nInd);
+	free(den_lattice);
+	free(delta_den);
+	freeMatrix(LDiagdelta_den, nInd);
+	
+	freePolyhedron(shapeIm_noEq);
+	free(ineqEqPart_shapeIm);
+	freeMatrix(linPart_shapeIm, nConstr_shapeIm);
+	freeMatrix(paramPart_shapeIm, nConstr_shapeIm);
+	free(constPart_shapeIm);
+	
+	freeMatrix(int_latticeIm, nDimOut);
+	free(den_latticeIm);
+	free(delta_denIm);
+	freeMatrix(LDiagdelta_denIm, nDimOut);
+	
+	free(kmax);
+	free(kmin);
+	
+	// TODO: add iterator from the main loop
+	
+	return result;
+}
 
 
