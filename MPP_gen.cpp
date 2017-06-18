@@ -3,46 +3,6 @@
 
 #include "MPP_gen.h"
 
-
-// Auxilliary functions
-int64 gcd(int64 a, int64 b) {
-	if (a<0)
-		a = -a;
-	if (b<0)
-		b = -b;
-	if (b==0)
-		return a;
-	return gcd(b, a%b);
-}
-
-int64 gcd_array(int64* elems, int nelem) {
-	assert(nelem>0);
-	
-	int64 gcd_ret = elems[0];
-	for (int i=1; i<nelem; i++) {
-		gcd_ret = gcd(gcd_ret, elems[i]);
-	}
-	return gcd_ret;
-}
-
-int64 ppcm(int64 a, int64 b) {
-	int64 g = gcd(a, b);
-	int64 adg = a / g;
-	int64 p = adg * b;
-	return p;
-}
-
-int64 ppcm_array(int64* elems, int nelem) {
-	assert(nelem>0);
-	
-	int64 ppcm_ret = elems[0];
-	for (int i=1; i<nelem; i++) {
-		ppcm_ret = ppcm(ppcm_ret, elems[i]);
-	}
-	return ppcm_ret;
-}
-
-
 // ---------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------

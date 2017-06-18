@@ -1,21 +1,6 @@
 
 #include "lexmin.h"
 
-// Pretty-printer
-void printMatrix(rational64** mat, int nRow, int nCol) {
-	for (int i=0; i<nRow; i++) {
-		cout << "[ ";
-		for (int j=0; j<nCol; j++) {
-			cout << mat[i][j].num << "/" << mat[i][j].den << " ";
-		}
-		cout << "]" << endl;
-	}
-	cout << endl;
-	
-	return;
-}
-
-/* ------------------------------------------------------------------- */
 
 PipVector* copy_pip_vector(PipVector* v) {
 	Entier* nnum = (Entier*) malloc(sizeof(Entier) * v->nb_elements);

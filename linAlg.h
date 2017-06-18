@@ -56,6 +56,59 @@ int64* vectMatrixMultiplication(int64* vect1, int nCol1, int64** mat2, int nRow2
 int64** inverseMatUnimod(int64** unimodMatinv, int nRow, int nCol);
 
 
+
+/* ~~~~~~ Rational matrix ~~~~~~ */
+struct rational64 {
+	int64 num;
+	int64 den;				// Must always be non-negative (den > 0)
+};
+
+int64 gcd(int64 a, int64 b);
+int64 ppcm(int64 a, int64 b);
+int64 gcd_array(int64* elems, int nelem);
+int64 ppcm_array(int64* elems, int nelem);
+
+
+// Basic operations on the rational64
+void simplify(rational64 rat);
+rational64 multiplyRational(rational64 a, rational64 b);
+rational64 addRational(rational64 a, rational64 b);
+rational64 invertRational(rational64 rat);
+
+
+// Pretty-printer
+void printMatrix(rational64** mat, int nRow, int nCol);
+
+// Free a matrix
+void freeMatrix(rational64** mat, int nRow);
+
+// Transform an integral matrix into a rational matrix
+rational64** toRationalMatrix(int64** mat, int nRow, int nCol);
+
+// Transform a rational matrix into an integral matrix
+int64** toIntegralMatrix(rational64** ratmat, int nRow, int nCol);
+
+
+// Matrix multiplication for rational matrices
+rational64** matrixMultiplication(rational64** mat1, int nRow1, int nCol1, rational64** mat2, int nRow2, int nCol2);
+
+// Inplace swapping of matrix rows
+void swapRowsMatrix(rational64** DG, int nRow, int nCol, int r1, int r2);
+
+// L_r1 <- L_r1 + coeff*L_r2
+void rowAddition(rational64** DG, int nRow, int nCol, int r1, int r2, rational64 coeff);
+
+// Transpose a matrix
+rational64** transpose(rational64** mat, int nRow, int nCol);
+
+
+// Get the inverse and the determinant of a matrix by the Gauss pivot method
+//		A is a square matrix, invA is a preallocated square matrix
+//		The determinant is returned. The inverse is stored in invA
+int64 inverseDet(int64** A, int64** invA, int nRow);
+
+
+
 /* ~~~~~~ Polyhedron ~~~~~~ */
 
 // Datastructure for polyhedron - similar to the Polylib format
@@ -109,6 +162,10 @@ polyhedronMPP* rectangularShape(int64* sizes, int nDim);
 // Build a parallelogram, using hyperplanes (which are the columns of the square matrix "hyperplanes")
 // Contraints: 0 <= \vec{v_k}.\vec{i} <= sizes[k].b -1 where v_k is a column vector
 polyhedronMPP* parallelogramShape(int64** hyperplanes, int64* sizes, int nDim);
+
+// Build the lattice of tile origins, using hyperplanes (which are the columns of the square matrix "hyperplanes")
+// Compute the (rational) inverse of "hyperplanes", and multiply it by the sizes
+int64** parallelogramOriginLattice(int64** hyperplanes, int64* sizes, int nDim);
 
 
 /* ~~~~~~ Affine function ~~~~~~ */

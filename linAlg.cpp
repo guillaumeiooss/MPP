@@ -272,6 +272,283 @@ int64** inverseMatUnimod(int64 **unimodMatinv, int nRow, int nCol) {
 }
 
 
+/* ------------------------------------------------------- */
+int64 gcd(int64 a, int64 b) {
+	if (a<0)
+		a = -a;
+	if (b<0)
+		b = -b;
+	if (b==0)
+		return a;
+	return gcd(b, a%b);
+}
+
+int64 ppcm(int64 a, int64 b) {
+	int64 g = gcd(a, b);
+	int64 adg = a / g;
+	int64 p = adg * b;
+	return p;
+}
+
+int64 gcd_array(int64* elems, int nelem) {
+	assert(nelem>0);
+	
+	int64 gcd_ret = elems[0];
+	for (int i=1; i<nelem; i++) {
+		gcd_ret = gcd(gcd_ret, elems[i]);
+	}
+	return gcd_ret;
+}
+
+int64 ppcm_array(int64* elems, int nelem) {
+	assert(nelem>0);
+	
+	int64 ppcm_ret = elems[0];
+	for (int i=1; i<nelem; i++) {
+		ppcm_ret = ppcm(ppcm_ret, elems[i]);
+	}
+	return ppcm_ret;
+}
+
+
+void simplify(rational64 rat) {
+	int64 num = rat.num;
+	int64 den = rat.den;
+	
+	int64 g = gcd(num, den);
+	rat.num = num / g;
+	rat.den = den / g;
+}
+
+rational64 multiplyRational(rational64 a, rational64 b) {
+	rational64 c;
+	c.num = a.num * b.num;
+	c.den = a.den * b.den;
+	simplify(c);
+	return c;
+}
+
+rational64 addRational(rational64 a, rational64 b) {
+	rational64 c;
+	c.num = a.num * b.den + b.num * a.den;
+	c.den = a.den * b.den;
+	simplify(c);
+	return c;
+}
+
+
+rational64 invertRational(rational64 rat) {
+	assert(rat.num!=0);
+	
+	rational64 inv;
+	if (rat.num>0) {
+		inv.num = rat.den;
+		inv.den = rat.num;
+	} else {
+		inv.num = - rat.den;
+		inv.den = - rat.num;
+	}
+	return inv;
+}
+
+
+void printMatrix(rational64** mat, int nRow, int nCol) {
+	for (int i=0; i<nRow; i++) {
+		cout << "[ ";
+		for (int j=0; j<nCol; j++) {
+			cout << mat[i][j].num << "/" << mat[i][j].den << " ";
+		}
+		cout << "]" << endl;
+	}
+	cout << endl;
+	
+	return;
+}
+
+void freeMatrix(rational64** mat, int nRow) {
+	for (int i=0; i<nRow; i++)
+		free(mat[i]);
+	free(mat);
+	
+	return;
+}
+
+rational64** toRationalMatrix(int64** mat, int nRow, int nCol) {
+	rational64** ratMat = (rational64**) malloc(nRow * sizeof(rational64*));
+	for (int i=0; i<nRow; i++)
+		ratMat[i] = (rational64*) malloc(nCol * sizeof(rational64));
+	
+	for (int i=0; i<nRow; i++)
+		for (int j=0; j<nCol; j++) {
+			rational64 ratTemp; ratTemp.num = mat[i][j]; ratTemp.den = 1;
+			ratMat[i][j] = ratTemp;
+		}
+	
+	return ratMat;
+}
+
+int64** toIntegralMatrix(rational64** ratmat, int nRow, int nCol) {
+	int64** mat = (int64**) malloc(nRow * sizeof(int64*));
+	for (int i=0; i<nRow; i++)
+		mat[i] = (int64*) malloc(nCol * sizeof(int64));
+	
+	for (int i=0; i<nRow; i++)
+		for (int j=0; j<nCol; j++) {
+			assert(ratmat[i][j].den==1);
+			mat[i][j] = ratmat[i][j].num;
+		}
+	
+	return mat;
+}
+
+
+
+
+rational64** matrixMultiplication(rational64** mat1, int nRow1, int nCol1, rational64** mat2, int nRow2, int nCol2) {
+	assert(nCol1==nRow2);
+	
+	rational64** retMat = (rational64**) malloc(nRow1 * sizeof(rational64*));
+	for (int i=0; i<nRow1; i++) {
+		retMat[i] = (rational64*) malloc(nCol2 * sizeof(rational64));
+		
+		for (int j=0; j<nCol2; j++) {
+			rational64 zero; zero.num=0; zero.den=1;
+			retMat[i][j] = zero;
+			
+			for (int k=0; k<nCol1; k++)
+				retMat[i][j] = addRational(retMat[i][j], multiplyRational(mat1[i][k], mat2[k][j]));
+		}
+	}
+	return retMat;
+}
+
+
+void swapRowsMatrix(rational64** DG, int nRow, int nCol, int r1, int r2) {
+	assert(0<=r1);
+	assert(0<=r2);
+	assert(r1<nRow);
+	assert(r2<nRow);
+	
+	rational64* tempRow = (rational64*) malloc(nCol * sizeof(rational64));
+	for (int j=0; j<nCol; j++)
+		tempRow[j] = DG[r1][j];
+	
+	for (int j=0; j<nCol; j++) {
+		DG[r1][j] = DG[r2][j];
+		DG[r2][j] = tempRow[j];
+	}
+	
+	free(tempRow);
+	
+	return;
+}
+
+// L_r1 <- L_r1 + coeff*L_r2
+void rowAddition(rational64** DG, int nRow, int nCol, int r1, int r2, rational64 coeff) {
+	assert(0<=r1);
+	assert(0<=r2);
+	assert(r1<nRow);
+	assert(r2<nRow);
+	assert(r1!=r2);
+	
+	for (int j=0; j<nCol; j++)
+		DG[r1][j] = addRational(DG[r1][j], multiplyRational(coeff, DG[r2][j]));
+	
+	return;
+}
+
+
+rational64** transpose(rational64** mat, int nRow, int nCol) {
+	rational64** trans = (rational64**) malloc(nCol * sizeof(rational64*));
+	for (int i=0; i<nCol; i++)
+		trans[i] = (rational64*) malloc(nRow * sizeof(rational64));
+	
+	for (int i=0; i<nCol; i++)
+		for (int j=0; j<nRow; j++)
+			trans[i][j] = mat[j][i];
+	return trans;
+}
+
+
+
+int64 inverseDet(int64** A, rational64** invA, int nRow) {
+	assert(nRow>0);
+	
+	// Idea: do a Gauss pivot Method to get a diagonal matrix DG and U such that DG = U.A
+	// To get U, we repeat exactly the same row operation on U that we use to get DG from A.
+	
+	// We have to do it in rational, else, by repeating Euclid algorithm, we might have
+	// unbounded coefficients, therefore, non-polynomial complexity.
+	
+	// 0. Initialization of the matrices
+	rational64** DG = toRationalMatrix(A, nRow, nRow);
+	rational64** U = (rational64**) malloc(nRow * sizeof(rational64*));
+	for (int i=0; i<nRow; i++)
+		U[i] = (rational64*) malloc(nRow * sizeof(rational64));
+	for (int i=0; i<nRow; i++)
+		for (int j=0; j<nRow; j++)
+			if (i==j) {
+				rational64 ratTemp; ratTemp.num = 1; ratTemp.den = 1;
+				U[i][j] = ratTemp;
+			} else {
+				rational64 ratTemp; ratTemp.num = 0; ratTemp.den = 1;
+				U[i][j] = ratTemp;
+			}
+	
+	// 1. "Double"-Pivot on the rows to get a diagonal matrix
+	// If the matrix is not inversible, we throw an exception
+	int nZrow = 0;
+	rational64 coeff; coeff.num = 0; coeff.den = 1;
+	
+	for (int j=0; j<nRow; j++) {
+		// We search a row with a non-zero coefficient.
+		nZrow = j;
+		while (nZrow<nRow && DG[nZrow][j].num==0)
+			nZrow++;
+		
+		assert(nZrow<nRow);		// If this fails, the matrix is not inversible (col of 0s)
+		// We put it on the first place
+		if (nZrow != j) {
+			swapRowsMatrix(DG, nRow, nRow, j, nZrow);
+			swapRowsMatrix(U, nRow, nRow, j, nZrow);
+		}
+		
+		// Elimination of the other coefficients on the top and the bottom of the row
+		for (int i=0; i<nRow; i++) {
+			if (i != j) {
+				rational64 temp = multiplyRational(DG[i][j], invertRational(DG[j][j]));
+				coeff.num = - temp.num;
+				coeff.den = temp.den;
+				
+				rowAddition(DG, nRow, nRow, i, j, coeff);					
+				rowAddition(U, nRow, nRow, i, j, coeff);
+			}
+		}
+	}
+	
+	// At the end, DG is diagonal and we have DG = U.A
+	
+	// 2. We compute and return the inverse (Ainv = (DG^{-1}).U ) and the determinant 
+	// (reminder: DG is diagonal, so getting DG^{-1} is trivial)
+	rational64 det; det.num = 1; det.den = 1;
+	
+	for (int i=0; i<nRow; i++) {
+		det = multiplyRational(det, DG[i][i]);
+		DG[i][i] = invertRational(DG[i][i]);
+	}
+	invA = matrixMultiplication(DG, nRow, nRow, U, nRow, nRow);
+	
+	// Free temporary structures
+	freeMatrix(DG, nRow);
+	freeMatrix(U, nRow);
+	
+	assert(det.den==1);
+	return det.num;
+}
+
+
+
+
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -643,13 +920,64 @@ polyhedronMPP* parallelogramShape(int64** hyperplanes, int64* sizes, int nDim) {
 	for (int i=0; i<nDim; i++) {
 		matPolyRet[nDim+i][0] = 1;								// Ineq
 		for (int j=0; j<nDim; j++)
-			matPolyRet[nDim+i][1+j] = -hyperplanes[j][i];		// Lin
+			matPolyRet[nDim+i][1+j] = - hyperplanes[j][i];		// Lin
 		matPolyRet[nDim+i][1+nDim] = sizes[i];					// Param "b"
 		matPolyRet[nDim+i][1+nDim+1] = -1;						// Const
 	}
 	
 	polyhedronMPP* polyRet = buildPolyhedron(matPolyRet, nConstr, nDim, 1);
 	return polyRet;
+}
+
+
+int64** parallelogramOriginLattice(int64** hyperplanes, int64* sizes, int nDim) {
+	// Equation: (origLat)^T * hyperplanes = Diag(sizes)
+	
+	// The origin lattice is the transpose of the inverse, multiplied by Diag(sizes)
+	rational64** inv = (rational64**) malloc(nDim * sizeof(rational64*));
+	for (int i=0; i<nDim; i++)
+		inv[i] = (rational64*) malloc(nDim * sizeof(rational64));
+	
+	inverseDet(hyperplanes, inv, nDim);
+	rational64** transInv = transpose(inv, nDim, nDim);
+	
+	// Multiply each rows by the sizes
+	for (int i=0; i<nDim; i++)
+		for (int j=0; j<nDim; j++) {
+			transInv[i][j].num = transInv[i][j].num * sizes[i];
+			simplify(transInv[i][j]);
+		}
+	
+	
+	// Convert this matrix into the origLatt
+	int64** origLat = (int64**) malloc((nDim+1) * sizeof(int64*));
+	for (int i=0; i<nDim; i++)
+		origLat[i] = (int64*) malloc(nDim * sizeof(int64));
+	
+	
+	// Find the common denominator for the whole column
+	int64* denCol = (int64*) malloc(nDim * sizeof(int64));
+	
+	for (int j=0; j<nDim; j++) {
+		int64 ppcm_den = transInv[0][j].den;
+		for (int i=1; i<nDim; i++)
+			ppcm_den = ppcm(ppcm_den, transInv[i][j].den);
+		denCol[j] = ppcm_den;
+	}
+	
+	for (int j=0; j<nDim; j++) {
+		for (int i=0; i<nDim; i++)
+			origLat[i][j] = transInv[i][j].num * (denCol[j] / transInv[i][j].den);
+		origLat[nDim][j] = denCol[j];
+	}
+	
+	
+	// Free temporary data structures
+	freeMatrix(inv, nDim);
+	freeMatrix(transInv, nDim);
+	free(denCol);
+	
+	return origLat;
 }
 
 

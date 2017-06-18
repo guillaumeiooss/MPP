@@ -20,7 +20,7 @@
 using namespace std;
 
 
-// Monoparametric tiling applied to a polyhedron
+// Monoparametric partitioning applied to a polyhedron
 //	- The input domain is "polyScalar"
 //	- "shape" defines the shape of the tile
 //	- "lattice" defines the lattice of tiles origins:
@@ -30,7 +30,8 @@ using namespace std;
 // The output of the transformation is an intersection (first "list") of union (second "list") of polyhedra. The simplification into a single union of polyhedra is doable, but would introduce many empty polyhedron and would require more polyhedral machinery.
 list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedronMPP *shape, int64** lattice, optionMPP *option);
 
-// Monoparametric tiling applied to an affine function
+
+// Monoparametric partitioning applied to an affine function
 //	- The input domain is "polyScalar"
 //	- "shape" defines the shape of the tile of the input space
 //	- "lattice" defines the lattice of tiles origins of the input space:

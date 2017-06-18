@@ -10,13 +10,6 @@
 #ifndef __LEXMIN_MPP_H
 #define __LEXMIN_MPP_H
 
-struct rational64 {
-	int64 num;
-	int64 den;
-};
-
-// Pretty-printer
-void printMatrix(rational64** mat, int nRow, int nCol);
 
 // Lexmax functions (using Piplib behind)
 // Note that in our context, we just need an upper-bound/lower-bound of the resulting QUAST.
