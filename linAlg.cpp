@@ -311,20 +311,23 @@ int64 ppcm_array(int64* elems, int nelem) {
 }
 
 
-void simplify(rational64 rat) {
+rational64 simplify(rational64 rat) {
 	int64 num = rat.num;
 	int64 den = rat.den;
 	
 	int64 g = gcd(num, den);
-	rat.num = num / g;
-	rat.den = den / g;
+	
+	rational64 retRat;
+	retRat.num = num / g;
+	retRat.den = den / g;
+	return retRat;
 }
 
 rational64 multiplyRational(rational64 a, rational64 b) {
 	rational64 c;
 	c.num = a.num * b.num;
 	c.den = a.den * b.den;
-	simplify(c);
+	c = simplify(c);
 	return c;
 }
 
@@ -332,7 +335,7 @@ rational64 addRational(rational64 a, rational64 b) {
 	rational64 c;
 	c.num = a.num * b.den + b.num * a.den;
 	c.den = a.den * b.den;
-	simplify(c);
+	c = simplify(c);
 	return c;
 }
 
@@ -536,13 +539,19 @@ int64 inverseDet(int64** A, rational64** invA, int nRow) {
 		det = multiplyRational(det, DG[i][i]);
 		DG[i][i] = invertRational(DG[i][i]);
 	}
-	invA = matrixMultiplication(DG, nRow, nRow, U, nRow, nRow);
+	rational64** invAfinal = matrixMultiplication(DG, nRow, nRow, U, nRow, nRow);
+	
+	// Copy the values of invAfinal in invA
+	for (int i=0; i<nRow; i++)
+		for (int j=0; j<nRow; j++)
+			invA[i][j] = invAfinal[i][j];
 	
 	// Free temporary structures
 	freeMatrix(DG, nRow);
 	freeMatrix(U, nRow);
+	freeMatrix(invAfinal, nRow);
 	
-	assert(det.den==1);
+	assert(det.den==1);		// Matrix is supposed to be integral at the start
 	return det.num;
 }
 

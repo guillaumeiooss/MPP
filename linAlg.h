@@ -70,7 +70,7 @@ int64 ppcm_array(int64* elems, int nelem);
 
 
 // Basic operations on the rational64
-void simplify(rational64 rat);
+rational64 simplify(rational64 rat);
 rational64 multiplyRational(rational64 a, rational64 b);
 rational64 addRational(rational64 a, rational64 b);
 rational64 invertRational(rational64 rat);
@@ -105,7 +105,7 @@ rational64** transpose(rational64** mat, int nRow, int nCol);
 // Get the inverse and the determinant of a matrix by the Gauss pivot method
 //		A is a square matrix, invA is a preallocated square matrix
 //		The determinant is returned. The inverse is stored in invA
-int64 inverseDet(int64** A, int64** invA, int nRow);
+int64 inverseDet(int64** A, rational64** invA, int nRow);
 
 
 

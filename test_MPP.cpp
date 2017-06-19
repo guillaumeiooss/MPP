@@ -281,6 +281,32 @@ void test_LinAlg_2() {
 	printMatrix(Ainv, 2, 2);
 }
 
+void test_LinAlg_3() {
+	int nDim = 3;
+	int64** A = (int64**) malloc(nDim*sizeof(int64*));
+	for (int i=0; i<nDim; i++)
+		A[i] = (int64*) malloc(nDim*sizeof(int64));
+	A[0][0] = 1; A[0][1] = 1; A[0][2] = 1;
+	A[1][0] = 0; A[1][1] = 1; A[1][2] = 0;
+	A[2][0] = 0; A[2][1] = 0; A[2][2] = 2;
+	
+	rational64** invA = (rational64**) malloc(nDim*sizeof(rational64*));
+	for (int i=0; i<nDim; i++)
+		invA[i] = (rational64*) malloc(nDim*sizeof(rational64));
+	for (int i=0; i<nDim; i++)
+		for (int j=0; j<nDim; j++) {
+			invA[i][j].num = 0;
+			invA[i][j].den = 0;
+		}
+	
+	int64 det = inverseDet(A, invA, nDim);
+	
+	cout << "Determinant = " << det << endl;
+	printMatrix(invA, nDim, nDim);
+}
+
+
+
 /* ------------------------------------------ */
 
 void test_lexminmax_1() {
@@ -497,6 +523,8 @@ int main() {
 	
 	//test_LinAlg_1();
 	//test_LinAlg_2();
+	test_LinAlg_3();
+	
 	
 	//test_lexminmax_1();
 	//test_lexminmax_2();
@@ -505,7 +533,7 @@ int main() {
 	//test_shape_rect_1();
 	//test_shape_para_1();
 	
-	test_MPP_Gen_Poly_Ex1();
+	//test_MPP_Gen_Poly_Ex1();
 	
 	// TODO: other test for the polyhedron case
 	
