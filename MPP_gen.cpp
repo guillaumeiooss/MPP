@@ -242,9 +242,12 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	
 	// Trivial case: the polyhedron do not have any index
 	//	=> We return a similar polyhedron (with the right amount of parameters)
-	if (polyScalar->nInd==0) {
+	if (nInd==0) {
 		int64** matConst = (int64**) malloc(1 * sizeof(int64*));
-		matConst[0] = (int64*) malloc( (3+2*polyScalar->nParam) * sizeof(int64));
+		matConst[0] = (int64*) malloc( (3+2*nParam) * sizeof(int64));
+		
+		// TODO: contrainte?
+		
 		polyhedronMPP* nullPoly = buildPolyhedron(matConst, 1, 0, 1+2*nParam);
 		
 		list<polyhedronMPP*> templist;
@@ -253,6 +256,21 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 		
 		return resDom;
 	}
+	
+	// Trivial case: the polyhedron do not have any constraint
+	//	=> We return the universe
+	if (nConstr==0) {
+		int64** matConst = (int64**) malloc(0 * sizeof(int64*));
+		polyhedronMPP* nullPoly = buildPolyhedron(matConst, 0, nInd, 1+2*nParam);
+		
+		list<polyhedronMPP*> templist;
+		templist.push_back(nullPoly);
+		resDom.push_back(templist);
+		
+		return resDom;
+	}
+	
+	
 	
 	// Extraction of the information from the polyhedron
 	polyhedronMPP* polyScalar_noEq = eliminateEqualities(polyScalar);
@@ -588,7 +606,17 @@ void get_kmaxkmin_func(long* kmax, long* kmin,
 		int64* ineqEqPart_shapeIm, int64** linPart_shapeIm, int64** paramPart_shapeIm, int64* constPart_shapeIm, int nConstr_shapeIm,
 		int64** int_lattice, int64* den_lattice, int64** int_latticeIm, int64* den_latticeIm, optionMPP* option) {
 	
+	// k = |_ D'^{-1} . \alpha' + L'^{-1}.i'_l/b _|
+	
+	
+	
+	
+	
+	
 	// TODO
+	
+	
+	
 	
 	return;
 }
@@ -748,10 +776,16 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 	//		Benefits: less empty polyhedron to remove from the resulting union
 	//			However, it complexifies the algorithm
 	
-	
+	int64* alpha = (int64*) malloc(nInd * sizeof(int64));
 	
 	
 	// TODO: iteration over the k + construction of the matrices
+	// TODO: iteration over \alpha, \alpha' (other?), then over the "k" ?
+	
+	
+	
+	
+	
 	
 	
 	
@@ -791,6 +825,7 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 	
 	free(kmax);
 	free(kmin);
+	free(alpha);
 	
 	// TODO: add iterator from the main loop
 	

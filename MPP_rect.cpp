@@ -21,10 +21,23 @@ list<list<polyhedronMPP*> > getRectangularTiledDomain(polyhedronMPP *polyScalar,
 	
 	// Trivial case: the polyhedron do not have any index
 	//	=> We return a similar polyhedron (with the right amount of parameters)
-	if (polyScalar->nInd==0) {
+	if (nInd==0) {
 		int64** matConst = (int64**) malloc(1 * sizeof(int64*));
 		matConst[0] = (int64*) malloc( (3+2*polyScalar->nParam) * sizeof(int64));
 		polyhedronMPP* nullPoly = buildPolyhedron(matConst, 1, 0, 1+2*nParam);
+		
+		list<polyhedronMPP*> templist;
+		templist.push_back(nullPoly);
+		resDom.push_back(templist);
+		
+		return resDom;
+	}
+	
+	// Trivial case: the polyhedron do not have any constraint
+	//	=> We return the universe
+	if (nConstr==0) {
+		int64** matConst = (int64**) malloc(0 * sizeof(int64*));
+		polyhedronMPP* nullPoly = buildPolyhedron(matConst, 0, nInd, 1+2*nParam);
 		
 		list<polyhedronMPP*> templist;
 		templist.push_back(nullPoly);
