@@ -250,8 +250,100 @@ void test_MPP_Func_Ex1() {
 	//( 0 0 | 1 0 | 0 | -1 )
 	//( 0 0 | 0 1 | 0 | -1 )
 	//	=> IF (ii>=1 && jj>=1 && b>=3) THEN (alpha,beta, ii-1, jj-1)
-	
 }
+
+// Example 2: (i,j -> i+j, i)
+void test_MPP_Func_Ex2() {
+	int nInd = 2;
+	int nParam = 1;
+	int dimOut = 2;
+	
+	int64** mat = (int64**) malloc(dimOut * sizeof(int64*));
+	for (int i=0; i<dimOut; i++)
+		mat[i] = (int64*) malloc((nInd+nParam+1)* sizeof(int64));
+	mat[0][0] = 1; mat[0][1] = 1; mat[0][2] = 0; mat[0][3] = 0;
+	mat[1][0] = 1; mat[1][1] = 0; mat[1][2] = 0; mat[1][3] = 0;
+	affFuncMPP *affScalar = buildAffineFunction(mat, dimOut, nInd, nParam);
+	
+	int64* scale = (int64*) malloc(nInd*sizeof(int64));
+	scale[0] = 1; scale[1] = 2;
+	
+	int64* scaleIm = (int64*) malloc(dimOut*sizeof(int64));
+	scaleIm[0] = 1; scaleIm[1] = 2;
+	
+	optionMPP* opt = (optionMPP*) malloc(sizeof(optionMPP));
+	opt->kMinMaxOption = 0;
+	opt->areParamDiv = false;
+	opt->minBlSizeParam = 3;
+	opt->errorIfModulo = false;
+	
+	
+	map<polyhedronMPP*, affFuncMPP*> resultFunc = getRectangularTiledFunction(affScalar, scale, scaleIm, opt);
+	printoutFunction(resultFunc);
+	
+	// RESULT: 3 branches
+	// 1) IF
+	//(0/1 | alpha beta | ii jj | Nb Nl b | cnst)    // 0 = equality / 1 = inequality
+	//( 1  | 0 0 |  1  1 | 0 0 0 |  0 )
+	//( 1  | 0 0 |  1  0 | 0 0 0 |  0 )
+	//( 1  | 0 0 | -1 -1 | 0 0 1 | -1 )
+	//( 1  | 0 0 | -1  0 | 0 0 2 | -2 )
+	//( 1  | 0 0 |  1  0 | 0 0 0 |  0 )
+	//( 1  | 0 0 |  0  1 | 0 0 0 |  0 )
+	//( 1  | 0 0 | -1  0 | 0 0 1 | -1 )
+	//( 1  | 0 0 |  0 -1 | 0 0 2 | -1 )
+	//( 1  | 0 0 |  0  0 | 0 0 1 | -3 )
+	// THEN
+	//(alpha beta | ii jj | Nb Nl b | cnst)
+	//( 1 2 | 0 0 | 0 0 0 | 0 )
+	//( 1 0 | 0 0 | 0 0 0 | 0 ) / 2
+	//( 0 0 | 1 1 | 0 0 0 | 0 )
+	//( 0 0 | 1 0 | 0 0 0 | 0 )
+	// => IF (0<=ii+jj<=b-1 && 0<=ii<=2b-2 && 0<=ii<b && 0<=jj<2b && b>=3)
+	//			THEN (alpha+2.beta, alpha/2, ii+jj, ii)
+	//
+	// 2) IF
+	//(0/1 | alpha beta | ii jj | Nb Nl b | cnst)    // 0 = equality / 1 = inequality
+	//( 1 | 0 0 |  1  1 | 0 0 -1 |  0 )
+	//( 1 | 0 0 |  1  0 | 0 0  0 |  0 )
+	//( 1 | 0 0 | -1 -1 | 0 0  2 | -1 )
+	//( 1 | 0 0 | -1  0 | 0 0  2 | -2 )
+	//( 1 | 0 0 |  1  0 | 0 0  0 |  0 )
+	//( 1 | 0 0 |  0  1 | 0 0  0 |  0 )
+	//( 1 | 0 0 | -1  0 | 0 0  1 | -1 )
+	//( 1 | 0 0 |  0 -1 | 0 0  2 | -1 )
+	//( 1 | 0 0 |  0  0 | 0 0  1 | -3 )
+	// THEN
+	//(alpha beta | ii jj | Nb Nl b | cnst)
+	//( 1 2 | 0 0 | 0 0  0 | 1 )
+	//( 1 0 | 0 0 | 0 0  0 | 0 ) / 2
+	//( 0 0 | 1 1 | 0 0 -1 | 0 )
+	//( 0 0 | 1 0 | 0 0  0 | 0 )
+	// => IF (b<=ii+jj<=2b-1 && 0<=ii<=2b-2 && 0<=ii<b && 0<=jj<2b && b>=3)
+	//			THEN (alpha+2.beta+1, alpha/2, ii+jj-b, ii)
+	//
+	// 3) IF
+	//(0/1 | alpha beta | ii jj | Nb Nl b | cnst)    // 0 = equality / 1 = inequality
+	//( 1 | 0 0 |  1  1 | 0 0 -2 |  0 )
+	//( 1 | 0 0 |  1  0 | 0 0  0 |  0 )
+	//( 1 | 0 0 | -1 -1 | 0 0  3 | -1 )
+	//( 1 | 0 0 | -1  0 | 0 0  2 | -2 )
+	//( 1 | 0 0 |  1  0 | 0 0  0 |  0 )
+	//( 1 | 0 0 |  0  1 | 0 0  0 |  0 )
+	//( 1 | 0 0 | -1  0 | 0 0  1 | -1 )
+	//( 1 | 0 0 |  0 -1 | 0 0  2 | -1 )
+	//( 1 | 0 0 |  0  0 | 0 0  1 | -3 )
+	// THEN
+	//(alpha beta | ii jj | Nb Nl b | cnst)
+	//( 1 2 | 0 0 | 0 0  0 | 2 )
+	//( 1 0 | 0 0 | 0 0  0 | 0 ) / 2
+	//( 0 0 | 1 1 | 0 0 -2 | 0 )
+	//( 0 0 | 1 0 | 0 0  0 | 0 )
+	// => IF (2b<=ii+jj<=3b-1 && 0<=ii<=2b-2 && 0<=ii<b && 0<=jj<2b && b>=3)
+	//			THEN (alpha+2.beta+2, alpha/2, ii+jj-2b, ii)
+}
+
+
 
 
 /* ------------------------------------------ */
@@ -520,10 +612,11 @@ int main() {
 	//test_MPP_Poly_Ex1();
 	//test_MPP_Poly_Ex2();
 	//test_MPP_Func_Ex1();
+	test_MPP_Func_Ex2();
 	
 	//test_LinAlg_1();
 	//test_LinAlg_2();
-	test_LinAlg_3();
+	//test_LinAlg_3();
 	
 	
 	//test_lexminmax_1();

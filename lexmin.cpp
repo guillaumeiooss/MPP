@@ -285,6 +285,8 @@ rational64** lexmin(polyhedronMPP *poly, int64** context, int nrow_context, int 
 polyhedronMPP* build_lexminmax_poly(affFuncMPP *obj, polyhedronMPP *dom) {
 	assert(dom->nParam=obj->nParam);
 	assert(dom->nInd=obj->nInd);
+	for (int i=0; i<obj->dimOut; i++)
+		assert(obj->divs[i]==1);
 	
 	int nConstrDom = dom->nConstr;
 	int nParam = dom->nParam;

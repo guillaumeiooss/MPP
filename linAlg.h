@@ -175,7 +175,8 @@ int64** parallelogramOriginLattice(int64** hyperplanes, int64* sizes, int nDim);
 // ----------------------
 //  ...  |  ...  |  ...  
 struct affFuncMPP {
-	int64** affFuncScalar;
+	int64** affFuncScalar;  /* Coefficients of the affine function */
+	int64* divs;            /* Divisor of the whole row. If integral, equal to "1". Should always be >=1 */
 	
 	int dimOut;			/* Dimension of the output */
 	
@@ -186,14 +187,21 @@ struct affFuncMPP {
 // Constructor
 affFuncMPP* buildAffineFunction(int64** mat, int dimOut, int nInd, int nParam);
 
+affFuncMPP* buildRationalAffineFunction(int64** mat, int64* div, int dimOut, int nInd, int nParam);
+
 // Destructor
 void freeAffineFunction(affFuncMPP* affFunc);
 
 // Pretty-printer
 void printAffFuncMPP(affFuncMPP* func);
 
+// Simplify the divs with the coefficients, if possible
+void simplifyAffFuncMPP(affFuncMPP* func);
+
 // Getters (all in one)
 void extractAffFunc(affFuncMPP* affFunc, int64** linPart, int64** paramPart, int64* constPart);
+
+void extractRationalAffFunc(affFuncMPP* affFunc, int64** linPart, int64** paramPart, int64* constPart, int64* div);
 
 // Given a polyhedron and a matrix, compute the resulting polyhedron after a change of basis
 polyhedronMPP* changeOfBasis(polyhedronMPP* poly, affFuncMPP* affFunc);

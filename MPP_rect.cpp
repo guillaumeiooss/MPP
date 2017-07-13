@@ -497,7 +497,7 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 		// \alpha = blocked index parameter / ii = local index parameter
 		// \rho = blocked parameters / pp = local parameters / b = block size parameter
 		//
-		int nRow_blConstr = 1+2*dimOut+2*nInd+nParam;
+		int nRow_blConstr = (option->areParamDiv)? 1+2*dimOut+2*nInd+nParam : 1+2*dimOut+2*nInd;
 		int nColumn_blConstr = 3+2*nParam+2*nInd;
 		
 		int64** inputConstrLongMat = (int64**) malloc(nRow_blConstr * sizeof(int64*));
@@ -584,25 +584,41 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 				for (int j=0; j<nColumn_relConstr; j++)
 					relationConstrLongMat[i][j] = 0;
 		
+		int64* divConstrLongMat = (int64*) malloc(nRow_relConstr * sizeof(int64));
+		for (int i=0; i<nRow_relConstr; i++)
+			divConstrLongMat[i] = 1;
+		
 		// (First rows)
 		for (int i=0; i<dimOut; i++) {
-			for (int j=0; j<nInd; j++) {
-				long temp = (long) (linPart[i][j] * scale[j] / scaleIm[i]);
-				if (temp*scaleIm[i] != linPart[i][j] * scale[j]) {
-					cerr << "The resulting affine function has Z-polyhedral constraints (linear | i = " << i << " | j = " << j << " )" << endl;
-					exit(-1);
+			if (option->errorIfModulo) {
+				for (int j=0; j<nInd; j++) {
+					long temp = (long) (linPart[i][j] * scale[j] / scaleIm[i]);
+					if (temp*scaleIm[i] != linPart[i][j] * scale[j]) {
+						cerr << "The resulting affine function has Z-polyhedral constraints (linear | i = " << i << " | j = " << j << " )" << endl;
+						exit(-1);
+					}
+					relationConstrLongMat[i][j] = temp;
 				}
-				relationConstrLongMat[i][j] = temp;
-			}
-			for (int j=0; j<nParam; j++) {
-				long temp = (long) (paramPart[i][j]/scaleIm[i]);
-				if (temp*scaleIm[i] != paramPart[i][j]) {
-					cerr << "The resulting affine function has Z-polyhedral constraints (param | i = " << i << " | j = " << j << " )" << endl;
-					exit(-1);
+				for (int j=0; j<nParam; j++) {
+					long temp = (long) (paramPart[i][j]/scaleIm[i]);
+					if (temp*scaleIm[i] != paramPart[i][j] && option-> errorIfModulo) {
+						cerr << "The resulting affine function has Z-polyhedral constraints (param | i = " << i << " | j = " << j << " )" << endl;
+						exit(-1);
+					}
+					relationConstrLongMat[i][2*nInd+j] = temp;
 				}
-				relationConstrLongMat[i][2*nInd+j] = temp;
+				relationConstrLongMat[i][nColumn_relConstr-1] = kCurr[i];
+			} else {
+				// Value in this case:
+				// [  Q.D     0   Qp      0          0         D'.k  ] / div: D'
+				for (int j=0; j<nInd; j++)
+					relationConstrLongMat[i][j] = linPart[i][j] * scale[j];
+				for (int j=0; j<nParam; j++)
+					relationConstrLongMat[i][2*nInd+j] = paramPart[i][j];
+				relationConstrLongMat[i][nColumn_relConstr-1] = scaleIm[i] * kCurr[i];
+				
+				divConstrLongMat[i] = scaleIm[i];
 			}
-			relationConstrLongMat[i][nColumn_relConstr-1] = kCurr[i];
 		}
 		
 		// (Second rows)
@@ -619,14 +635,18 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 		cout << " * relationConstrLongMat:" << endl;
 		for (int i=0; i<nRow_relConstr; i++) {
 			for (int j=0; j<nColumn_relConstr; j++)
-				cout << (relationConstrLongMat[i][j] << " ";
+				cout << relationConstrLongMat[i][j] << " ";
 			cout << endl;
 		}
 		cout << endl;
+		cout << " * divConstrLongMat:" << endl;
+		for (int i=0; i<nRow_relConstr; i++)
+			cout << divConstrLongMat[i] << " ";
+		cout << endl;
 		//*/
 		
-		affFuncMPP* affFuncRet = buildAffineFunction(relationConstrLongMat, 2*dimOut, 2*nInd, 2*nParam+1);
-		
+		affFuncMPP* affFuncRet = buildRationalAffineFunction(relationConstrLongMat, divConstrLongMat, 2*dimOut, 2*nInd, 2*nParam+1);
+		simplifyAffFuncMPP(affFuncRet);
 		result.insert ( pair<polyhedronMPP*, affFuncMPP*>(polyRet, affFuncRet) );
 		
 		// We increase the multi-dimensional iterator, starting from the first dimension and propagating the overflows

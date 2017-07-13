@@ -29,6 +29,7 @@ struct optionMPP {
   int kMinMaxOption = 0;
   bool areParamDiv = false;
   int minBlSizeParam = 4;
+  bool errorIfModulo = false;
 };
 
 

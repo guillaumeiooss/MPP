@@ -598,11 +598,19 @@ void printPolyhedronMPP(polyhedronMPP* poly) {
 }
 
 
-
 affFuncMPP* buildAffineFunction(int64** mat, int dimOut, int nInd, int nParam) {
+	int64* divs = (int64*) malloc(dimOut * sizeof(int64));
+	for (int i=0; i<dimOut; i++)
+		divs[i] = 1;
+	
+	return buildRationalAffineFunction(mat, divs, dimOut, nInd, nParam);
+}
+
+affFuncMPP* buildRationalAffineFunction(int64** mat, int64* divs, int dimOut, int nInd, int nParam) {
 	affFuncMPP *res = (affFuncMPP*) malloc(sizeof(affFuncMPP));
 	
 	res->affFuncScalar = mat;
+	res->divs = divs;
 	res->dimOut = dimOut;
 	res->nInd = nInd;
 	res->nParam = nParam;
@@ -612,8 +620,10 @@ affFuncMPP* buildAffineFunction(int64** mat, int dimOut, int nInd, int nParam) {
 
 
 
+
 void freeAffineFunction(affFuncMPP* affFunc) {
 	freeMatrix(affFunc->affFuncScalar, affFunc->dimOut);
+	free(affFunc->divs);
 	free(affFunc);
 	return;
 }
@@ -625,9 +635,40 @@ void printAffFuncMPP(affFuncMPP* func) {
 		cout << "		(";
 		for (int j=0; j<func->nInd+func->nParam+1; j++)
 			cout << " " << func->affFuncScalar[i][j];
-		cout << " )" << endl;
+		cout << " )";
+		if (func->divs[i]!=1)
+			cout << " / " << func->divs[i];
+		cout << endl;
 	}
 	cout << endl;
+}
+
+
+void simplifyAffFuncMPP(affFuncMPP* func) {
+	int64** mat = func->affFuncScalar;
+	int64* divs = func->divs;
+	int dimOut = func->dimOut;
+	int nCoeff = func->nInd + func->nParam + 1;
+	
+	for (int i=0; i<dimOut; i++) {
+		int64 gCoeff = gcd_array(mat[i], nCoeff);
+		
+		int64 gGlobal = 0;
+		if (gCoeff==0)
+			gGlobal=divs[i];
+		else
+			gGlobal = gcd(divs[i], gCoeff);
+		
+		if (gGlobal!=1) {
+			assert(gGlobal>1);
+			// Simplification possible
+			for (int j=0; j<nCoeff; j++)
+				mat[i][j] = mat[i][j] / gGlobal;
+			divs[i] = divs[i] / gGlobal;
+		}
+	}
+	
+	return;
 }
 
 
@@ -765,9 +806,11 @@ void extractAffFunc(affFuncMPP* affFunc, int64** linPart, int64** paramPart, int
 	int nParam = affFunc->nParam;
 	int nInd = affFunc->nInd;
 	int dimOut = affFunc->dimOut;
-	int64** matScalar = affFunc->affFuncScalar; 
+	int64** matScalar = affFunc->affFuncScalar;
 	
 	for (int i=0; i<dimOut; i++) {
+		assert(affFunc->divs[i]==1);
+		
 		for (int j=0; j<nInd; j++)
 			linPart[i][j] = matScalar[i][j];
 		for (int j=0; j<nParam; j++)
@@ -778,6 +821,24 @@ void extractAffFunc(affFuncMPP* affFunc, int64** linPart, int64** paramPart, int
 	return;
 }
 
+void extractRationalAffFunc(affFuncMPP* affFunc, int64** linPart, int64** paramPart, int64* constPart, int64* div) {
+	int nParam = affFunc->nParam;
+	int nInd = affFunc->nInd;
+	int dimOut = affFunc->dimOut;
+	int64** matScalar = affFunc->affFuncScalar;
+	int64* divs = affFunc->divs;
+	
+	for (int i=0; i<dimOut; i++) {
+		div[i] = divs[i];
+		for (int j=0; j<nInd; j++)
+			linPart[i][j] = matScalar[i][j];
+		for (int j=0; j<nParam; j++)
+			paramPart[i][j] = matScalar[i][nInd+j];
+		constPart[i] = matScalar[i][nInd+nParam];
+	}
+	
+	return;
+}
 
 
 polyhedronMPP* reformPoly(int64* ineqEqPart, int64** paramPart, int64** linPart, int64* constPart, int nConstr, int nParam, int nInd) {
@@ -805,6 +866,9 @@ polyhedronMPP* changeOfBasis(polyhedronMPP* poly, affFuncMPP* affFunc) {
 	
 	assert(affFunc->nParam == poly->nParam);
 	assert(affFunc->nInd == poly->nInd);
+	
+	for (int i=0; i<affFunc->dimOut; i++)
+		assert(affFunc->divs[i] = 1);
 	
 	// Extraction of constraints
 	int64* ineqEqPart = (int64*) malloc(poly->nConstr * sizeof(int64));
