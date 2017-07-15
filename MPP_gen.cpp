@@ -245,9 +245,6 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	if (nInd==0) {
 		int64** matConst = (int64**) malloc(1 * sizeof(int64*));
 		matConst[0] = (int64*) malloc( (3+2*nParam) * sizeof(int64));
-		
-		// TODO: contrainte?
-		
 		polyhedronMPP* nullPoly = buildPolyhedron(matConst, 1, 0, 1+2*nParam);
 		
 		list<polyhedronMPP*> templist;
@@ -607,7 +604,9 @@ void get_kmaxkmin_func(long* kmax, long* kmin,
 		int64** int_lattice, int64* den_lattice, int64** int_latticeIm, int64* den_latticeIm, optionMPP* option) {
 	
 	// k = |_ D'^{-1} . \alpha' + L'^{-1}.i'_l/b _|
+	// TODO: not only
 	
+	// TODO: unified way to get k and k' in a single setting?
 	
 	
 	
@@ -642,7 +641,6 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 	
 	// DEBUG
 	//cout << "nInd = " << nInd << " | nParam = " << nParam << " | nDimOut = " << nDimOut << endl;
-	
 	
 	// Returned data structure
 	map<polyhedronMPP*, affFuncMPP*> result;
@@ -827,7 +825,7 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 	free(kmin);
 	free(alpha);
 	
-	// TODO: add iterator from the main loop
+	// TODO: add the free for iterator of the main loop
 	
 	return result;
 }

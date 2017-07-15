@@ -601,9 +601,71 @@ void test_MPP_Gen_Poly_Ex1() {
 	//( 1 |  0  0 |  0 -1 | 0 0 | 1 | -1 )
 	//( 1 |  0  0 |  0  0 | 0 0 | 1 | -3 )
 	//		=> {alpha,beta, ii,jj | alpha+beta=Nbl && Nloc-1>=ii+jj && 0<=(ii,jj)<b && b>=3}
-	
 }
 
+
+void test_MPP_Gen_Func_Ex1() {
+	// Example 1: (i,j -> i, j) with:
+	//   - square 3b*2b tiles on the input space
+	//   - hexagonal 45° "4b*2b" tiles on the output space
+	
+	int nInd = 2;
+	int nParam = 0;
+	int dimOut = 2;
+	
+	int64** mat = (int64**) malloc(dimOut * sizeof(int64*));
+	for (int i=0; i<dimOut; i++)
+		mat[i] = (int64*) malloc((nInd+nParam+1)* sizeof(int64));
+	mat[0][0] = 1;
+	mat[0][1] = 0;
+	mat[0][2] = 0;
+	mat[1][0] = 0;
+	mat[1][1] = 1;
+	mat[1][2] = 0;
+	affFuncMPP *affScalar = buildAffineFunction(mat, dimOut, nInd, nParam);
+	
+	// Input space partitioning
+	int64* scale = (int64*) malloc(nInd*sizeof(int64));
+	scale[0] = 1; scale[1] = 1;
+	polyhedronMPP *shapeIn = rectangularShape(scale, 2);
+	int64** latticeIn = rectangularOriginLattice(scale, 2);
+	
+	// Output space partitioning
+	// Tile shape: {ii,jj | 0<=ii-jj<4b && -b<=jj<b && 0<=ii+jj<4b }
+	int nConstrHex = 6;
+	int nCol_matHex = 2 + dimOut + 1;
+	int64** matHex = (int64**) malloc(nConstrHex * sizeof(int64*));
+	for (int i=0; i<dimOut; i++)
+		matHex[i] = (int64*) malloc(nCol_matHex * sizeof(int64));
+	matHex[0][0] = 1; matHex[0][1] = -1; matHex[0][2] =  1; matHex[0][3] =  4; matHex[0][4] = -1;	// (0<=-ii+jj+4b-1)
+	matHex[1][0] = 1; matHex[1][1] =  1; matHex[1][2] = -1; matHex[1][3] =  0; matHex[1][4] =  0;	// (0<=ii-jj)
+	matHex[2][0] = 1; matHex[2][1] =  0; matHex[2][2] =  1; matHex[2][3] = -1; matHex[2][4] =  0;	// (0<=jj-b)
+	matHex[3][0] = 1; matHex[3][1] =  0; matHex[3][2] = -1; matHex[3][3] =  1; matHex[3][4] = -1;	// (0<=b-jj-1)
+	matHex[4][0] = 1; matHex[4][1] =  1; matHex[4][2] =  1; matHex[4][3] =  0; matHex[4][4] =  0;	// (0<=ii+jj)
+	matHex[5][0] = 1; matHex[5][1] = -1; matHex[5][2] = -1; matHex[5][3] =  4; matHex[5][4] = -1;	// (0<=4b-ii-jj-1)
+	polyhedronMPP* shapeOut = buildPolyhedron(matHex, nConstrHex, dimOut, 1);
+	
+	// Lattice of tile origin - basis is: (3b, b), (3b, -b)
+	int64** latticeOut = (int64**) malloc((dimOut+1) * sizeof(int64*));
+	for (int i=0; i<dimOut+1; i++)
+		latticeOut[i] = (int64*) malloc(dimOut * sizeof(int64));
+	latticeOut[0][0] = 3; latticeOut[0][1] =  3;
+	latticeOut[1][0] = 1; latticeOut[1][1] = -1;
+	latticeOut[2][0] = 1; latticeOut[2][1] =  1;
+	
+	optionMPP* opt = (optionMPP*) malloc(sizeof(optionMPP));
+	opt->kMinMaxOption = 0;
+	opt->areParamDiv = false;
+	opt->minBlSizeParam = 3;
+	
+	map<polyhedronMPP*, affFuncMPP*> resultFunc = getRectangularTiledFunction(affScalar,
+			shapeIn, latticeIn, shapeOut, latticeOut, opt);
+	printoutFunction(resultFunc);
+	
+	// TODO: test that
+	
+	
+}
 
 
 /* ------------------------------------------ */
@@ -612,7 +674,7 @@ int main() {
 	//test_MPP_Poly_Ex1();
 	//test_MPP_Poly_Ex2();
 	//test_MPP_Func_Ex1();
-	test_MPP_Func_Ex2();
+	//test_MPP_Func_Ex2();
 	
 	//test_LinAlg_1();
 	//test_LinAlg_2();
@@ -626,10 +688,10 @@ int main() {
 	//test_shape_rect_1();
 	//test_shape_para_1();
 	
-	//test_MPP_Gen_Poly_Ex1();
+	test_MPP_Gen_Poly_Ex1();
+	//test_MPP_Gen_Func_Ex1();
 	
 	// TODO: other test for the polyhedron case
-	
 	// TODO: test for the affine function case
 	
 	return 0;

@@ -159,6 +159,9 @@ void printPolyhedronMPP(polyhedronMPP* poly);
 // Build a rectangle [|\vec{0}; b*\vec{sizes} [|
 polyhedronMPP* rectangularShape(int64* sizes, int nDim);
 
+// Build the lattice of tile origins, corresponding to the tiling of tile [|\vec{0}; b*\vec{sizes} [|
+int64** rectangularOriginLattice(int64* sizes, int nDim);
+
 // Build a parallelogram, using hyperplanes (which are the columns of the square matrix "hyperplanes")
 // Contraints: 0 <= \vec{v_k}.\vec{i} <= sizes[k].b -1 where v_k is a column vector
 polyhedronMPP* parallelogramShape(int64** hyperplanes, int64* sizes, int nDim);

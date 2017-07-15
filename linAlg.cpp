@@ -970,6 +970,24 @@ polyhedronMPP* rectangularShape(int64* sizes, int nDim) {
 	return polyRet;
 }
 
+int64** rectangularOriginLattice(int64* sizes, int nDim) {
+	int64** origLat = (int64**) malloc( (nDim+1) * sizeof(int64*));
+	for (int i=0; i<nDim+1; i++)
+		origLat[i] = (int64*) malloc(nDim * sizeof(int64));
+	
+	for (int i=0; i<nDim; i++)
+		for (int j=0; j<nDim; j++) {
+			if (i==j)
+				origLat[i][j] = sizes[i];
+			else
+				origLat[i][j] = 0;
+		}
+	for (int j=0; j<nDim; j++)
+		origLat[nDim][j] = 1;
+	
+	return origLat;
+}
+
 
 polyhedronMPP* parallelogramShape(int64** hyperplanes, int64* sizes, int nDim) {
 	int nConstr = 2*nDim;
