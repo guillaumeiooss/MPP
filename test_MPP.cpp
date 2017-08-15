@@ -658,7 +658,7 @@ void test_MPP_Gen_Func_Ex1() {
 	opt->areParamDiv = false;
 	opt->minBlSizeParam = 3;
 	
-	map<polyhedronMPP*, affFuncMPP*> resultFunc = getRectangularTiledFunction(affScalar,
+	map<polyhedronMPP*, affFuncMPP*> resultFunc = getTiledFunction(affScalar,
 			shapeIn, latticeIn, shapeOut, latticeOut, opt);
 	printoutFunction(resultFunc);
 	

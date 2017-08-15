@@ -42,7 +42,7 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 // The output of the transformation is a piecewise affine function: the branches are stored in a "map",
 //		the first element of the pair is the condition of the branch, and
 //		the second element of the pair is the value of the function on the branch.
-map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScalar,
+map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	polyhedronMPP *shape, int64** lattice,
 	polyhedronMPP *shapeIm, int64** latticeIm,
 	optionMPP *option);
