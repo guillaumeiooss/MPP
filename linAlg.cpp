@@ -311,6 +311,12 @@ int64 ppcm_array(int64* elems, int nelem) {
 }
 
 
+rational64 toRational(int64 x) {
+	rational64 retRat;
+	retRat.num = x; retRat.den = 1;
+	return retRat;
+}
+
 rational64 simplify(rational64 rat) {
 	int64 num = rat.num;
 	int64 den = rat.den;
@@ -339,6 +345,21 @@ rational64 addRational(rational64 a, rational64 b) {
 	return c;
 }
 
+rational64 subRational(rational64 a, rational64 b) {
+	rational64 c;
+	c.num = a.num * b.den - b.num * a.den;
+	c.den = a.den * b.den;
+	c = simplify(c);
+	return c;
+}
+
+rational64 oppositeRational(rational64 a) {
+	rational64 retRat;
+	retRat.num = - a.num;
+	retRat.den = a.den;
+	return retRat;
+}
+
 
 rational64 invertRational(rational64 rat) {
 	assert(rat.num!=0);
@@ -353,6 +374,16 @@ rational64 invertRational(rational64 rat) {
 	}
 	return inv;
 }
+
+rational64* toRationalVector(int64* vect, int nElem) {
+	rational64* ratVect = (rational64*) malloc(nElem * sizeof(rational64));
+	for (int i=0; i<nElem; i++) {
+		rational64 ratTemp; ratTemp.num = vect[i]; ratTemp.den = 1;
+		ratVect[i] = ratTemp;
+	}
+	return ratVect;
+}
+
 
 
 void printMatrix(rational64** mat, int nRow, int nCol) {
@@ -404,6 +435,23 @@ int64** toIntegralMatrix(rational64** ratmat, int nRow, int nCol) {
 	return mat;
 }
 
+
+rational64 dotProduct(rational64* vect1, rational64* vect2, int nElem) {
+	rational64 ratTemp; ratTemp.num = 0; ratTemp.den = 1;
+	for (int i=0; i<nElem; i++)
+		ratTemp = addRational(ratTemp, multiplyRational(vect1[i], vect2[i]));
+	return ratTemp;
+}
+
+
+rational64* matVectProduct(rational64** mat, int nRow, int nCol, rational64* vect, int nElem) {
+	assert(nCol==nElem);
+	
+	rational64* resVect = (rational64*) malloc(nRow * sizeof(rational64));
+	for (int i=0; i<nElem; i++)
+		resVect[i] = dotProduct(mat[i], vect, nElem);
+	return resVect;
+}
 
 
 

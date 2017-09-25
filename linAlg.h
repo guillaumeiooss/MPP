@@ -70,11 +70,17 @@ int64 ppcm_array(int64* elems, int nelem);
 
 
 // Basic operations on the rational64
+rational64 toRational(int64 x);
 rational64 simplify(rational64 rat);
 rational64 multiplyRational(rational64 a, rational64 b);
 rational64 addRational(rational64 a, rational64 b);
+rational64 subRational(rational64 a, rational64 b);
+rational64 oppositeRational(rational64 a);
 rational64 invertRational(rational64 rat);
 
+
+// Transform an integral vector into a rational vector
+rational64* toRationalVector(int64* vect, int nElem);
 
 // Pretty-printer
 void printMatrix(rational64** mat, int nRow, int nCol);
@@ -88,6 +94,11 @@ rational64** toRationalMatrix(int64** mat, int nRow, int nCol);
 // Transform a rational matrix into an integral matrix
 int64** toIntegralMatrix(rational64** ratmat, int nRow, int nCol);
 
+// Dot product between two rational vectors
+rational64 dotProduct(rational64* vect1, rational64* vect2, int nElem);
+
+// Matrix-vector product
+rational64* matVectProduct(rational64** mat, int nRow, int nCol, rational64* vect, int nElem);
 
 // Matrix multiplication for rational matrices
 rational64** matrixMultiplication(rational64** mat1, int nRow1, int nCol1, rational64** mat2, int nRow2, int nCol2);
