@@ -151,7 +151,15 @@ int64* vectMatrixMultiplication(int64* vect1, int nCol1, int64** mat2, int nRow2
 	return retVect;
 }
 
-
+int64 dotProduct(int64* vect1, int nElem1, int64* vect2, int nElem2) {
+	assert(nElem1==nElem2);
+	
+	int64 ret = 0;
+	for (int i=0; i<nElem1; i++)
+		ret += vect1[i] * vect2[i];
+	
+	return ret;
+}
 
 // Inversion of a unimodular matrix
 int64** inverseMatUnimod(int64 **unimodMatinv, int nRow, int nCol) {

@@ -52,6 +52,9 @@ int64* matrixVectMultiplication(int64** mat1, int nRow1, int nCol1, int64* vect2
 // Vector-matrix multiplication vect1*mat2
 int64* vectMatrixMultiplication(int64* vect1, int nCol1, int64** mat2, int nRow2, int nCol2);
 
+// Dot-product vect1*vect2
+int64 dotProduct(int64* vect1, int nElem1, int64* vect2, int nElem2);
+
 // Inversion of a unimodular matrix
 int64** inverseMatUnimod(int64** unimodMatinv, int nRow, int nCol);
 
