@@ -1129,6 +1129,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			}
 		
 		rational64* ratAlpha = toRationalVector(alpha, nInd);
+		rational64* ratAlphaIm = toRationalVector(alphaIm, nDimOut);
 		
 		// Precomputation of LDinv.\alpha for the second row
 		rational64* LDinvalpha = matVectProduct(LDinv, nInd, nInd, ratAlpha, nInd);
@@ -1196,7 +1197,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			tempVectb[i] = temp;
 		}
 		rational64* QLDinvalpha = matVectProduct(QLDinv, nDimOut, nInd, ratAlpha, nInd);
-		rational64* LinvDImAlphaIm = matVectProduct(LinvDIm, nDimOut, nDimOut, alphaIm, nInd);
+		rational64* LinvDImAlphaIm = matVectProduct(LinvDIm, nDimOut, nDimOut, ratAlphaIm, nInd);
 		for (int i=0; i<nDimOut; i++)
 			tempVectb[i] = addRational(tempVectb[i], subRational(QLDinvalpha[i], LinvDImAlphaIm[i]));
 		free(LinvDImAlphaIm);
@@ -1212,7 +1213,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			rational64 tempbRat = dotProduct(ratLinShapeLine, tempVectb, nDimOut);
 			free(ratLinShapeLine);
 			
-			rational64 shparImRat; shparImRat.num = paramPart_shapeIm[i]; shparImRat.den = 1;
+			rational64 shparImRat; shparImRat.num = paramPart_shapeIm[i][0]; shparImRat.den = 1;
 			rational64 tempRatb = addRational(tempbRat, shparImRat);
 			
 			for (int j=0; j<nInd; j++)
@@ -1223,7 +1224,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			inputConstrLongMat[nConstr_shape+i][1+2*nInd+2*nParam] = tempRatb.num;						// b
 			
 			int64 shlinImq = dotProduct(constPart_shape, nDimOut, constPart, nDimOut);					// Const
-			inputConstrLongMat[nConstr_shape+i][nCol_blConstr-1] = (constPart_shapeIm + shlinImq) * tempRatb.den;
+			inputConstrLongMat[nConstr_shape+i][nCol_blConstr-1] = (constPart_shapeIm[i] + shlinImq) * tempRatb.den;
 		}
 		
 		freeMatrix(shlinImQ, nConstr_shapeIm);
@@ -1432,7 +1433,6 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			rational64 ratbElemAlpha = dotProduct(ratLinPartRow, LDinvalpha, nInd);
 			ratbElem = addRational(ratbElem, ratbElemAlpha);
 			
-			rational64* ratAlphaIm = toRationalVector(alphaIm, nDimOut);
 			rational64 ratbElemAlphaIm = dotProduct(LDinvIm[i], ratAlphaIm, nDimOut);
 			ratbElem = subRational(ratbElem, ratbElemAlphaIm);
 			
@@ -1455,7 +1455,6 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			// Guarranty that the division on the last line is integral
 			
 			free(ratLinPartRow);
-			free(ratAlphaIm);
 			free(tempRatRow);
 		}
 		
@@ -1472,6 +1471,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		freeMatrix(LDinvIm, nDimOut);
 		free(LDinvalpha);
 		free(ratAlpha);
+		free(ratAlphaIm);
 		// End of construction of the branch
 		
 		
