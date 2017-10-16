@@ -1038,6 +1038,40 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			deltaDLinvIm[i][j] = (deltaIm / DLinvIm[i][j].den) * DLinvIm[i][j].num;
 	
 	
+	// Computation of L.D^{-1} and epsilon
+	rational64** LDinv = (rational64**) malloc(nInd * sizeof(rational64*));
+	for (int i=0; i<nInd; i++)
+		LDinv[i] = (rational64*) malloc(nInd * sizeof(rational64));
+	for (int i=0; i<nInd; i++)
+		for (int j=0; j<nInd; j++) {
+			rational64 temp; temp.num = int_lattice[i][j]; temp.den = den_lattice[i];
+			LDinv[i][j] = simplify(temp);
+		}
+	
+	int64 epsilon = 1;
+	for (int i=0; i<nInd; i++)
+		for (int j=0; j<nInd; j++)
+			epsilon = ppcm(epsilon, LDinv[i][j].den);
+	
+	
+	// Computation of LDinvIm = L'.D'^{-1} and epsilon'
+	rational64** LDinvIm = (rational64**) malloc(nDimOut * sizeof(rational64*));
+	for (int i=0; i<nDimOut; i++)
+		LDinvIm[i] = (rational64*) malloc(nDimOut * sizeof(rational64));
+	for (int i=0; i<nDimOut; i++)
+		for (int j=0; j<nDimOut; j++) {
+			rational64 temp; temp.num = int_latticeIm[i][j]; temp.den = den_latticeIm[i];
+			LDinvIm[i][j] = simplify(temp);
+		}
+	
+	int64 epsilonIm = 1;
+	for (int i=0; i<nDimOut; i++)
+		for (int j=0; j<nDimOut; j++)
+			epsilonIm = ppcm(epsilonIm, LDinvIm[i][j].den);
+	
+	
+	
+	
 	// Computation of kmin/kmax and kImmin/kImmax
 	long* kmax = (long*) malloc(nDimOut * sizeof(long));
 	long* kmin = (long*) malloc(nDimOut * sizeof(long));
@@ -1075,8 +1109,10 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	//			However, it complexifies the algorithm
 	
 	int64* kCurr = (int64*) malloc(nDimOut * sizeof(int64));
-	int64* alpha = (int64*) malloc(nInd * sizeof(int64));
 	int64* kImCurr = (int64*) malloc(nDimOut * sizeof(int64));
+	int64* z_alpha = (int64*) malloc(nInd * sizeof(int64));
+	int64* alpha = (int64*) malloc(nInd * sizeof(int64));
+	int64* z_alphaIm = (int64*) malloc(nDimOut * sizeof(int64));
 	int64* alphaIm = (int64*) malloc(nDimOut * sizeof(int64));
 	
 	// Level 1 of iteration: kCurr
@@ -1090,43 +1126,82 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	while (kImCurr[nDimOut-1]<=kImmax[nDimOut-1]) {
 	
 	// Level 3 of iterator: alpha, where \vec{0} \leq L.D^{-1}.\vec{\alpha} < \delta.\vec{1}
-	for (int i=0; i<nInd; i++)
-		alpha[i] = ;		// TODO
-	while () {				// TODO
+	//			<=> alpha, where \vec{0} \leq deltaLDinv.\vec{\alpha} < \delta^2.\vec{1}
+	//
+	// Trick: we can transform L.D^{-1} into a integral invertible matrix by considering
+	//		the rectangle Q = { \vec{z} | \vec{0} \leq \vec{z} < \delta^2.\vec{1} }
+	//  ===> for every point \vec{z} of Q, compute deltaLDinv^{-1}.\vec{z}
+	//			=> If it is not integral, discard
+	//			=> If it is integral, (deltaLDinv^{-1}.\vec{z}) is a possible \alpha
 	
+	for (int i=0; i<nInd; i++)
+		z_alpha[i] = 0;
+	while (z_alpha[nInd-1]<delta*epsilon) {
+	
+	// Construction of alpha & skip of invalid z_alpha
+	// alpha = 1/epsilon * D.L^{-1} . z_alpha, when this quantity is integral
+	rational64* zalphaRat = toRationalVector(z_alpha, nInd);
+	rational64* alphaTemp = matVectProduct(DLinv, nInd, nInd, zalphaRat, nInd);
+	for (int i=0; i<nInd; i++)
+		alphaTemp[i] = multiplyRational(alphaTemp[i], invertRational(toRational(epsilon)));
+	
+	bool skipAlpha = false;
+	for (int i=0; i<nInd; i++)
+		if (alphaTemp[i].den!=1)
+			skipAlpha = true;
+	free(alphaTemp);
+	free(zalphaRat);
+	
+	if (skipAlpha) {
+		z_alpha[0]++;
+		for (int i=0; i<nInd; i++)
+			if (z_alpha[i]>epsilon*delta) {
+				z_alpha[i] = 0;
+				z_alpha[i+1]++;
+			}
+		continue;
+	}
+	
+	
+	// Level 4 of iterator: alpha', where \vec{0] \leq L'.D'^{-1}.\vec{\alpha'} < \delta'.\vec{1}
 	for (int i=0; i<nDimOut; i++)
-		alphaIm[i] = ;		// TODO
-	while() {				// TODO
+		z_alphaIm[i] = 0;
+	while(z_alphaIm[nDimOut-1]<deltaIm*epsilonIm) {
+		
+		// Construction of alphaIm & skip of invalid z_alphaIm
+		rational64* zalphaRatIm = toRationalVector(z_alphaIm, nDimOut);
+		rational64* alphaTempIm = matVectProduct(DLinvIm, nDimOut, nDimOut, zalphaRatIm, nDimOut);
+		for (int i=0; i<nDimOut; i++)
+			alphaTempIm[i] = multiplyRational(alphaTempIm[i], invertRational(toRational(epsilonIm)));
+		
+		bool skipAlphaIm = false;
+		for (int i=0; i<nDimOut; i++)
+			if (alphaTempIm[i].den!=1)
+				skipAlphaIm = true;
+		free(alphaTempIm);
+		free(zalphaRatIm);
+	
+		if (skipAlphaIm) {
+			z_alphaIm[0]++;
+			for (int i=0; i<nDimOut; i++)
+				if (z_alphaIm[i]>epsilonIm*deltaIm) {
+					z_alphaIm[i] = 0;
+					z_alphaIm[i+1]++;
+				}
+			continue;
+		}
+		
 		
 		// We build the branch of the piecewise affine function corresponding to (kCurr, kImCurr, alpha, alphaIm)
 		
 		// Precomputation of the following products:
-		//		- LDinv = L.D^{-1}
 		//		- QLDinv = Q.L.D^{-1}
 		//		- DLinvImQLDinv = D'.L'^{-1}.Q.L.D^{-1}
-		rational64** LDinv = (rational64**) malloc(nInd * sizeof(rational64*));
-		for (int i=0; i<nInd; i++)
-			LDinv[i] = (rational64*) malloc(nInd * sizeof(rational64));
-		for (int i=0; i<nInd; i++)
-			for (int j=0; j<nInd; j++) {
-				rational64 temp; temp.num = int_lattice[i][j]; temp.den = den_lattice[i];
-				LDinv[i][j] = simplify(temp);
-			}
 		rational64** Qrat = toRationalMatrix(linPart, nDimOut, nInd);
 		rational64** QLDinv = matrixMultiplication(Qrat, nDimOut, nInd, LDinv, nInd, nInd);
 		rational64** DLinvImQLDinv = matrixMultiplication(DLinvIm, nDimOut, nDimOut, QLDinv, nDimOut, nInd);
 		
 		freeMatrix(Qrat, nDimOut);
-		
-		// Precomputation of LDinvIm = L'.D'^{-1}
-		rational64** LDinvIm = (rational64**) malloc(nDimOut * sizeof(rational64*));
-		for (int i=0; i<nDimOut; i++)
-			LDinvIm[i] = (rational64*) malloc(nDimOut * sizeof(rational64));
-		for (int i=0; i<nDimOut; i++)
-			for (int j=0; j<nDimOut; j++) {
-				rational64 temp; temp.num = int_latticeIm[i][j]; temp.den = den_latticeIm[i];
-				LDinvIm[i][j] = simplify(temp);
-			}
 		
 		rational64* ratAlpha = toRationalVector(alpha, nInd);
 		rational64* ratAlphaIm = toRationalVector(alphaIm, nDimOut);
@@ -1465,24 +1540,30 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		result.insert ( pair<polyhedronMPP*, affFuncMPP*>(polyRet, affFuncRet) );
 		
 		// Free temporary data structures
-		freeMatrix(LDinv, nInd);
 		freeMatrix(QLDinv, nDimOut);
 		freeMatrix(DLinvImQLDinv, nDimOut);
-		freeMatrix(LDinvIm, nDimOut);
 		free(LDinvalpha);
 		free(ratAlpha);
 		free(ratAlphaIm);
 		// End of construction of the branch
 		
 		
-		// TODO: alphaIm++
-		
-		
+		// "z_alphaIm++", with overflow propagation
+		z_alphaIm[0]++;
+		for (int i=0; i<nDimOut; i++)
+			if (z_alphaIm[i]>epsilonIm*deltaIm) {
+				z_alphaIm[i] = 0;
+				z_alphaIm[i+1]++;
+			}
 	} // End of while loop on alphaIm
 	
-	// TODO alpha++
-	
-	
+	// "z_alpha++", with overflow propagation
+	z_alpha[0]++;
+	for (int i=0; i<nInd; i++)
+		if (z_alpha[i]>epsilon*delta) {
+			z_alpha[i] = 0;
+			z_alpha[i+1]++;
+		}
 	} // End of while loop on alpha
 	
 	// "kImCurr++", with overflow propagation
@@ -1518,7 +1599,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	freeMatrix(int_lattice, nInd);
 	free(den_lattice);
 	freeMatrix(DLinv, nInd);
-	freeMatrix(deltaDLinv, nInd);
+	freeMatrix(LDinv, nInd);
 	
 	freePolyhedron(shapeIm_noEq);
 	free(ineqEqPart_shapeIm);
@@ -1529,8 +1610,8 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	freeMatrix(int_latticeIm, nDimOut);
 	free(den_latticeIm);
 	freeMatrix(DLinvIm, nDimOut);
-	freeMatrix(deltaDLinvIm, nDimOut);
 	freeMatrix(LinvDIm, nDimOut);
+	freeMatrix(LDinvIm, nDimOut);
 	
 	free(kmax);
 	free(kmin);
