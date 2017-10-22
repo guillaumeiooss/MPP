@@ -626,7 +626,7 @@ void test_MPP_Gen_Func_Ex1() {
 	
 	// Input space partitioning
 	int64* scale = (int64*) malloc(nInd*sizeof(int64));
-	scale[0] = 1; scale[1] = 1;
+	scale[0] = 3; scale[1] = 2;
 	polyhedronMPP *shapeIn = rectangularShape(scale, 2);
 	int64** latticeIn = rectangularOriginLattice(scale, 2);
 	
@@ -635,11 +635,11 @@ void test_MPP_Gen_Func_Ex1() {
 	int nConstrHex = 6;
 	int nCol_matHex = 2 + dimOut + 1;
 	int64** matHex = (int64**) malloc(nConstrHex * sizeof(int64*));
-	for (int i=0; i<dimOut; i++)
+	for (int i=0; i<nConstrHex; i++)
 		matHex[i] = (int64*) malloc(nCol_matHex * sizeof(int64));
 	matHex[0][0] = 1; matHex[0][1] = -1; matHex[0][2] =  1; matHex[0][3] =  4; matHex[0][4] = -1;	// (0<=-ii+jj+4b-1)
 	matHex[1][0] = 1; matHex[1][1] =  1; matHex[1][2] = -1; matHex[1][3] =  0; matHex[1][4] =  0;	// (0<=ii-jj)
-	matHex[2][0] = 1; matHex[2][1] =  0; matHex[2][2] =  1; matHex[2][3] = -1; matHex[2][4] =  0;	// (0<=jj-b)
+	matHex[2][0] = 1; matHex[2][1] =  0; matHex[2][2] =  1; matHex[2][3] =  1; matHex[2][4] =  0;	// (0<=jj+b)
 	matHex[3][0] = 1; matHex[3][1] =  0; matHex[3][2] = -1; matHex[3][3] =  1; matHex[3][4] = -1;	// (0<=b-jj-1)
 	matHex[4][0] = 1; matHex[4][1] =  1; matHex[4][2] =  1; matHex[4][3] =  0; matHex[4][4] =  0;	// (0<=ii+jj)
 	matHex[5][0] = 1; matHex[5][1] = -1; matHex[5][2] = -1; matHex[5][3] =  4; matHex[5][4] = -1;	// (0<=4b-ii-jj-1)
@@ -660,7 +660,7 @@ void test_MPP_Gen_Func_Ex1() {
 	
 	map<polyhedronMPP*, affFuncMPP*> resultFunc = getTiledFunction(affScalar,
 			shapeIn, latticeIn, shapeOut, latticeOut, opt);
-	printoutFunction(resultFunc);
+	//printoutFunction(resultFunc);
 	
 	// TODO: test that
 	
@@ -688,11 +688,10 @@ int main() {
 	//test_shape_rect_1();
 	//test_shape_para_1();
 	
-	test_MPP_Gen_Poly_Ex1();
-	//test_MPP_Gen_Func_Ex1();
+	//test_MPP_Gen_Poly_Ex1();
+	test_MPP_Gen_Func_Ex1();
 	
 	// TODO: other test for the polyhedron case
-	// TODO: test for the affine function case
 	
 	return 0;
 }
