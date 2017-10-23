@@ -649,7 +649,6 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 	}
 	polyhedronMPP* constr1Im = buildPolyhedron(matConstr1Im, nConstr_shapeIm, nDimOut, 1);
 	
-	
 	// First part of kIm: i'_l/b where i'_l \in constr1Im
 	// For the objective function, we get the min/max of each components of i'_l separately
 	//		by examining each of its dimension separately
@@ -679,7 +678,6 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 		int64 den_cst_maxIm1 = coeff_cst_maxIm1.den;
 		
 		kIm_max_1[c] = aux_max_computation(num_b_maxIm1, den_b_maxIm1, num_cst_maxIm1, den_cst_maxIm1, option);
-		
 		
 		rational64** minIm_1 = min(obj_func, constr1Im);
 		
@@ -722,6 +720,8 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 	free(kIm_min_2);
 	free(kIm_max_2);
 	
+	// DEBUG
+	//cout << "kmin/max : part 1 done - part 2 starting " << endl;
 	
 	// ------------------------------------------------------------------------
 	// PART 2: k = |_ Q.L.D^{-1} . \alpha + (Q.i_l+R.p_l.q)/b _|
@@ -883,8 +883,8 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	int nInd = affScalar->nInd;
 	int nDimOut = affScalar->dimOut;
 	
-	// DEBUG
-	//cout << "nInd = " << nInd << " | nParam = " << nParam << " | nDimOut = " << nDimOut << endl;
+	// DEBUG TODO
+	cout << "nInd = " << nInd << " | nParam = " << nParam << " | nDimOut = " << nDimOut << endl;
 	
 	// Returned data structure
 	map<polyhedronMPP*, affFuncMPP*> result;
@@ -926,6 +926,8 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	int64* constPart_shape = (int64*) malloc(nConstr_shape * sizeof(int64));
 	extractPoly(shape_noEq, ineqEqPart_shape, linPart_shape, paramPart_shape, constPart_shape);
 	
+	
+	
 	// Extraction of the information from the lattice of tile origin for the input space
 	int64** int_lattice = (int64**) malloc(nInd * sizeof(int64*));
 	for (int i=0; i<nInd; i++)
@@ -962,7 +964,6 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			int_latticeIm[i][j] = latticeIm[i][j];
 	for (int j=0; j<nDimOut; j++)
 		den_latticeIm[j] = latticeIm[nInd][j];
-	
 	
 	// Pre-computation of D.L^{-1} and D'.L'^{-1}
 	rational64** invL = (rational64**) malloc(nInd * sizeof(rational64*));
@@ -1070,6 +1071,8 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			epsilonIm = ppcm(epsilonIm, LDinvIm[i][j].den);
 	
 	
+	// DEBUG
+	//cout << "debug - end of precomputation " << endl;
 	
 	
 	// Computation of kmin/kmax and kImmin/kImmax
@@ -1095,7 +1098,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	    int_latticeIm, den_latticeIm, deltaIm,
 	    option);
 	
-	/* DEBUG - kmin / kmax
+	//* TODO DEBUG - kmin / kmax
 	cout << "DEBUG: kmin - kmax" << endl;
 	for (int i=0; i<nDimOut; i++)
 		cout << "kmin[" << i << "] = " << kmin[i] << "  |  kmax[" << i << "] = " << kmax[i] << endl;
@@ -1115,6 +1118,32 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	int64* z_alphaIm = (int64*) malloc(nDimOut * sizeof(int64));
 	int64* alphaIm = (int64*) malloc(nDimOut * sizeof(int64));
 	
+	// We have \delta'.\vec{\lambda'} + \vec{k'} = \delta.Q.\vec{\lambda} + R.\vec{p_b} + \vec{k}
+	//	=> By looking at the gcd of the whole equation, we can constraint (\vec{k} - \vec{k'})
+	// Note: gcdkminkIm must be a vector of strictly positive elements
+	int64* gcdkminkIm = (int64*) malloc(nDimOut * sizeof(int64));
+	for (int i=0; i<nDimOut; i++)		// Init/default case (for debugging/ignoring this optim)
+		gcdkminkIm[i] = 1;
+	
+	for (int i=0; i<nDimOut; i++) {
+		// Gcd of \delta', R[i][*] and \delta.Q[i][*]
+		int64 tempGcd = deltaIm;
+		for (int j=0; j<nParam; j++)
+			if (paramPart[i][j]!=0)
+				tempGcd = gcd(tempGcd, paramPart[i][j]);
+		for (int j=0; j<nInd; j++)
+			if (linPart[i][j]!=0)
+				tempGcd = gcd(tempGcd, delta * linPart[i][j]);
+		
+		gcdkminkIm[i] = tempGcd;
+	}
+	
+	// TODO DEBUG
+	cout << "gcdkminkIm = ";
+	printVector(gcdkminkIm, nDimOut);
+	cout << endl;
+	
+	
 	// Level 1 of iteration: kCurr
 	for (int i=0; i<nDimOut; i++)
 		kCurr[i] = kmin[i];
@@ -1124,6 +1153,32 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	for (int i=0; i<nDimOut; i++)
 		kImCurr[i] = kImmin[i];
 	while (kImCurr[nDimOut-1]<=kImmax[nDimOut-1]) {
+	
+	// Skip criterion: (\vec{k} - \vec{k'}) must be a multiple of \vec{gcdkminkIm}
+	bool skipkminkIm = false;
+	for (int i=0; i<nDimOut; i++) {
+		int64 diff = kCurr[i] - kImCurr[i];
+		if (diff<0)
+			diff = -diff;
+		if (diff==0)
+			continue;
+		
+		// diff is strictly positive at this point
+		int64 mod = diff % gcdkminkIm[i];
+		if (mod!=0)
+			skipkminkIm = true;
+	}
+	if (skipkminkIm) {
+		kImCurr[0]++;
+		for (int i=0; i<nDimOut-1; i++)
+			if (kImCurr[i]>kImmax[i]) {
+				kImCurr[i] = kImmin[i];
+				kImCurr[i+1]++;
+			}
+		continue;
+	}
+	
+	
 	
 	// Level 3 of iterator: alpha, where \vec{0} \leq L.D^{-1}.\vec{\alpha} < \delta.\vec{1}
 	//			<=> alpha, where \vec{0} \leq deltaLDinv.\vec{\alpha} < \delta^2.\vec{1}
@@ -1162,11 +1217,16 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		continue;
 	}
 	
+	// TODO: skip criterion in relation to k ?
+	
 	
 	// Level 4 of iterator: alpha', where \vec{0] \leq L'.D'^{-1}.\vec{\alpha'} < \delta'.\vec{1}
 	for (int i=0; i<nDimOut; i++)
 		z_alphaIm[i] = 0;
 	while(z_alphaIm[nDimOut-1]<deltaIm*epsilonIm) {
+		
+		// TODO: skip criterion in relation to k' ?
+		
 		
 		// Construction of alphaIm & skip of invalid z_alphaIm
 		rational64* zalphaRatIm = toRationalVector(z_alphaIm, nDimOut);
@@ -1622,6 +1682,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	free(kImCurr);
 	free(alpha);
 	free(alphaIm);
+	free(gcdkminkIm);
 	
 	return result;
 }
