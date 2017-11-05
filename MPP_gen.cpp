@@ -627,12 +627,11 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 		int64** linPart, int64** paramPart, int64* constPart, int nDimOut, int nInd, int nParam,
 		int64* ineqEqPart_shape, int64** linPart_shape, int64** paramPart_shape, int64* constPart_shape, int nConstr_shape,
 		int64* ineqEqPart_shapeIm, int64** linPart_shapeIm, int64** paramPart_shapeIm, int64* constPart_shapeIm, int nConstr_shapeIm,
-		int64** int_lattice, int64* den_lattice, int64 delta,
-		int64** int_latticeIm, int64* den_latticeIm, int64 deltaIm,
+		int64 epsilon, rational64** LDinv, int64 epsilonIm, rational64** LDinvIm,
 		optionMPP* option) {
 	
 	// PART 1: kIm(\alpha', i'_l) = |_ L'.D'^{-1} . \alpha' + i'_l/b _|
-	//				where 0\leq L'.D^{-1}.\alpha'< \delta'.\vec{1} && i'_l \in shapeIm
+	//				where 0\leq \alpha'< \delta'.D'.L'^{-1}.\vec{1} && i'_l \in shapeIm
 	
 	// We pre-build the polyhedron { i'_l | i'_l \in shapeIm }, b being the only parameter
 	int nCol_constr1Im = 3 + nDimOut;
@@ -649,6 +648,7 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 	}
 	polyhedronMPP* constr1Im = buildPolyhedron(matConstr1Im, nConstr_shapeIm, nDimOut, 1);
 	
+	
 	// First part of kIm: i'_l/b where i'_l \in constr1Im
 	// For the objective function, we get the min/max of each components of i'_l separately
 	//		by examining each of its dimension separately
@@ -662,8 +662,9 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 		int64** mat_objfunc = (int64**) malloc(nRow_mat_objfunc * sizeof(int64*));
 		for (int i=0; i<nRow_mat_objfunc; i++)
 			mat_objfunc[i] = (int64*) malloc(nCol_mat_objfunc * sizeof(int64));
-		for (int j=0; j<nCol_mat_objfunc; j++)
-			mat_objfunc[0][j] = 0;
+		for (int i=0; i<nRow_mat_objfunc; i++)
+			for (int j=0; j<nCol_mat_objfunc; j++)
+				mat_objfunc[i][j] = 0;
 		
 		mat_objfunc[0][c] = 1;							// Lin
 		affFuncMPP* obj_func = buildAffineFunction(mat_objfunc, 1, nInd, 1);
@@ -694,15 +695,38 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 		freeAffineFunction(obj_func);
 	}
 	
-	// Second part: L'.D'^{-1}.\alpha' where 0\leq L'.D^{-1}.\alpha'< \delta'.\vec{1} 
-	// Because of the definition of \alpha', kIm_min_2 = 0 and kIm_max_2 = delta'
+	// Second part: L'.D'^{-1}.\alpha' where 0\leq \alpha'< \epsilon'.\vec{1}
 	double* kIm_min_2 = (double*) malloc(nDimOut * sizeof(double));
 	double* kIm_max_2 = (double*) malloc(nDimOut * sizeof(double));
 	
+	// We also use Piplib here to get the min and max
 	for (int c=0; c<nDimOut; c++) {
-		kIm_min_2[c] = 0.0;
-		kIm_max_2[c] = (double) deltaIm;
+		// We look at the sign of the coefficient of LDinvIm to compute the max/min
+		
+		// Init
+		rational64 tempMax;
+		if (LDinvIm[c][0].num >= 0)
+			tempMax = multiplyRational(LDinvIm[c][0], toRational(epsilonIm-1));
+		else
+			tempMax = toRational(0);
+		rational64 tempMin;
+		if (LDinvIm[c][0].num >= 0)
+			tempMin = toRational(0);
+		else
+			tempMin = multiplyRational(LDinvIm[c][0], toRational(epsilonIm-1));
+		
+		for (int j=1; j<nDimOut; j++) {
+			if (LDinvIm[c][j].num >= 0) {
+				tempMax = addRational(tempMax, multiplyRational(LDinvIm[c][j], toRational(epsilonIm-1)));
+			} else {
+				tempMin = addRational(tempMin, multiplyRational(LDinvIm[c][j], toRational(epsilonIm-1)));
+			}
+		}
+		
+		kIm_max_2[c] = ((double) tempMax.num) / ((double) tempMax.den);
+		kIm_min_2[c] = ((double) tempMin.num) / ((double) tempMin.den);
 	}
+	
 	
 	// Final part: fill the values of kImmax and kImmin
 	for (int c=0; c<nDimOut; c++) {
@@ -713,12 +737,30 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 		kImmin[c] = min_final;
 	}
 	
+	/* DEBUG - kImmin / kImmax
+	cout << "DEBUG: kIm_min_1 - kIm_max_1" << endl;
+	for (int i=0; i<nDimOut; i++)
+		cout << "kIm_min_1[" << i << "] = " << kIm_min_1[i] << "  |  kIm_max_1[" << i << "] = " << kIm_max_1[i] << endl;
+	cout << endl;
+	
+	cout << "DEBUG: kIm_min_2 - kIm_max_2" << endl;
+	for (int i=0; i<nDimOut; i++)
+		cout << "kIm_min_2[" << i << "] = " << kIm_min_2[i] << "  |  kIm_max_2[" << i << "] = " << kIm_max_2[i] << endl;
+	cout << endl;
+	
+	cout << "DEBUG: kImmin - kImmax" << endl;
+	for (int i=0; i<nDimOut; i++)
+		cout << "kImmin[" << i << "] = " << kImmin[i] << "  |  kImmax[" << i << "] = " << kImmax[i] << endl;
+	cout << endl;
+	//*/
+	
 	// Free temporary structures
 	freePolyhedron(constr1Im);
 	free(kIm_min_1);
 	free(kIm_max_1);
 	free(kIm_min_2);
 	free(kIm_max_2);
+	
 	
 	// DEBUG
 	//cout << "kmin/max : part 1 done - part 2 starting " << endl;
@@ -766,7 +808,6 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 	
 	polyhedronMPP* constr_ilpl = buildPolyhedron(mat_ilpl, nRow_mat_ilpl, nInd+nParam, 1);
 	
-	
 	// First part of k: (Q.i_l+R.p_l.q)/b
 	double* k_min_1 = (double*) malloc(nDimOut * sizeof(double));
 	double* k_max_1 = (double*) malloc(nDimOut * sizeof(double));
@@ -779,6 +820,9 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 		int64** mat_objfunc = (int64**) malloc(nRow_mat_objfunc * sizeof(int64*));
 		for (int i=0; i<nRow_mat_objfunc; i++)
 			mat_objfunc[i] = (int64*) malloc(nCol_mat_objfunc * sizeof(int64));
+		for (int i=0; i<nRow_mat_objfunc; i++)
+			for (int j=0; j<nCol_mat_objfunc; j++)
+				mat_objfunc[i][j] = 0;
 		
 		for (int j=0; j<nInd; j++)
 			mat_objfunc[0][j] = linPart[c][j];				// i_l
@@ -818,34 +862,45 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 	}
 	
 	
-	// Second part: Q. (L.D^{-1}.\alpha)  where 0\leq L.D^{-1}.\alpha < \delta.vec{1}
-	//		=> we just have to find the max and min of Q.\lambda, where 0\leq \lambda < \delta.vec{1}
+	// Second part: Q. (L.D^{-1}.\alpha)  where 0\leq \alpha< \epsilon.\vec{1}
 	double* k_min_2 = (double*) malloc(nDimOut * sizeof(double));
 	double* k_max_2 = (double*) malloc(nDimOut * sizeof(double));
 	
-	for (int c=0; c<nDimOut; c++) {
-		double max2 = 0.0;
-		for (int i=0; i<nInd; i++) {
-			if (linPart[i]>=0) {
-				max2 += (double) linPart[c][i] * (delta-1);
-			} else {
-				max2 += 0.0;  // Negative contribution
-			}
-		}
-		k_max_2[c] = max2;
-	}
+	// Precomputation: Q.LDinv
+	rational64** linPartRat = toRationalMatrix(linPart, nDimOut, nInd);
+	rational64** QLDinv = matrixMultiplication(linPartRat, nDimOut, nInd, LDinv, nInd, nInd);
+	freeMatrix(linPartRat, nDimOut);
 	
 	for (int c=0; c<nDimOut; c++) {
-		double min2 = 0.0;
-		for (int i=0; i<nInd; i++) {
-			if (linPart[i]>=0) {
-				min2 += 0.0;	// Positive contribution
+		// We look at the sign of the coefficient of QLDinv to compute the max/min
+		
+		// Init
+		rational64 tempMax;
+		if (QLDinv[c][0].num >= 0)
+			tempMax = multiplyRational(QLDinv[c][0], toRational(epsilon-1));
+		else
+			tempMax = toRational(0);
+		rational64 tempMin;
+		if (QLDinv[c][0].num >= 0)
+			tempMin = toRational(0);
+		else
+			tempMin = multiplyRational(QLDinv[c][0], toRational(epsilon-1));
+		
+		for (int j=1; j<nDimOut; j++) {
+			if (QLDinv[c][j].num >= 0) {
+				tempMax = addRational(tempMax, multiplyRational(QLDinv[c][j], toRational(epsilon-1)));
 			} else {
-				min2 += (double) linPart[c][i] * (delta-1);
+				tempMin = addRational(tempMin, multiplyRational(QLDinv[c][j], toRational(epsilon-1)));
 			}
 		}
-		k_min_2[c] = min2;
+		
+		kIm_max_2[c] = ((double) tempMax.num) / ((double) tempMax.den);
+		kIm_min_2[c] = ((double) tempMin.num) / ((double) tempMin.den);
 	}
+	
+	// Free temporary structure
+	freeMatrix(QLDinv, nDimOut);
+	
 	
 	// Final part: fill the values of kImmax and kImmin
 	for (int c=0; c<nDimOut; c++) {
@@ -855,6 +910,23 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 		long min_final = floor(k_min_1[c] + k_min_2[c]);
 		kmin[c] = min_final;
 	}
+	
+	/* DEBUG - kmin / kmax
+	cout << "DEBUG: k_min_1 - k_max_1" << endl;
+	for (int i=0; i<nDimOut; i++)
+		cout << "k_min_1[" << i << "] = " << k_min_1[i] << "  |  k_max_1[" << i << "] = " << k_max_1[i] << endl;
+	cout << endl;
+	
+	cout << "DEBUG: k_min_2 - k_max_2" << endl;
+	for (int i=0; i<nDimOut; i++)
+		cout << "k_min_2[" << i << "] = " << k_min_2[i] << "  |  k_max_2[" << i << "] = " << k_max_2[i] << endl;
+	cout << endl;
+	
+	cout << "DEBUG: kmin - kmax" << endl;
+	for (int i=0; i<nDimOut; i++)
+		cout << "kmin[" << i << "] = " << kmin[i] << "  |  kmax[" << i << "] = " << kmax[i] << endl;
+	cout << endl;
+	//*/
 	
 	// Free temporary structures
 	free(k_min_1);
@@ -883,8 +955,8 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	int nInd = affScalar->nInd;
 	int nDimOut = affScalar->dimOut;
 	
-	// DEBUG TODO
-	cout << "nInd = " << nInd << " | nParam = " << nParam << " | nDimOut = " << nDimOut << endl;
+	// DEBUG
+	//cout << "nInd = " << nInd << " | nParam = " << nParam << " | nDimOut = " << nDimOut << endl;
 	
 	// Returned data structure
 	map<polyhedronMPP*, affFuncMPP*> result;
@@ -965,6 +1037,51 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	for (int j=0; j<nDimOut; j++)
 		den_latticeIm[j] = latticeIm[nInd][j];
 	
+	// DEBUG
+	//cout << "debug - end of extraction" << endl;
+	
+	/* DEBUG - content check of everything extracted
+	cout << "linPart =" << endl;
+	printMatrix(linPart, nDimOut, nInd);
+	cout << "paramPart =" << endl;
+	printMatrix(paramPart, nDimOut, nParam);
+	cout << "constPart = ";
+	printVector(constPart, nDimOut);
+	cout << endl;
+	
+	cout << "ineqEqPart_shape = " << endl;
+	printVector(ineqEqPart_shape, nConstr_shape);
+	cout << "linPart_shape =" << endl;
+	printMatrix(linPart_shape, nConstr_shape, nInd);
+	cout << "paramPart_shape =" << endl;
+	printMatrix(paramPart_shape, nConstr_shape, 1);
+	cout << "constPart_shape = ";
+	printVector(constPart_shape, nConstr_shape);
+	
+	cout << "int_lattice =" << endl;
+	printMatrix(int_lattice, nInd, nInd);
+	cout << "den_lattice = ";
+	printVector(den_lattice, nInd);
+	cout << endl;
+	
+	cout << "ineqEqPart_shapeIm = " << endl;
+	printVector(ineqEqPart_shapeIm, nConstr_shapeIm);
+	cout << "linPart_shapeIm =" << endl;
+	printMatrix(linPart_shapeIm, nConstr_shapeIm, nInd);
+	cout << "paramPart_shapeIm =" << endl;
+	printMatrix(paramPart_shapeIm, nConstr_shapeIm, 1);
+	cout << "constPart_shapeIm = ";
+	printVector(constPart_shapeIm, nConstr_shapeIm);
+	
+	cout << "int_latticeIm =" << endl;
+	printMatrix(int_latticeIm, nDimOut, nDimOut);
+	cout << "den_latticeIm = ";
+	printVector(den_latticeIm, nDimOut);
+	cout << endl;
+	//*/
+	
+	
+	
 	// Pre-computation of D.L^{-1} and D'.L'^{-1}
 	rational64** invL = (rational64**) malloc(nInd * sizeof(rational64*));
 	for (int i=0; i<nInd; i++)
@@ -1007,39 +1124,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	freeMatrix(invLIm, nDimOut);
 	
 	
-	// Computation of \delta and \delta', such that $\delta.DLinv$ and $\delta'.DLinvIm$ are integral
-	int64* DLinvDen = (int64*) malloc(nInd * nInd * sizeof(int64));
-	for (int i=0; i<nInd; i++)
-		for (int j=0; j<nInd; j++)
-			DLinvDen[i*nInd+j] = DLinv[i][j].den;
-	int64 delta = ppcm_array(DLinvDen, nInd * nInd);
-	free(DLinvDen);
-	
-	int64* DLinvDenIm = (int64*) malloc(nDimOut * nDimOut * sizeof(int64));
-	for (int i=0; i<nDimOut; i++)
-		for (int j=0; j<nDimOut; j++)
-			DLinvDenIm[i*nDimOut+j] = DLinvIm[i][j].den;
-	int64 deltaIm = ppcm_array(DLinvDenIm, nDimOut * nDimOut);
-	free(DLinvDenIm);
-	
-	// Computation of \delta.D.L^{-1}
-	int64** deltaDLinv = (int64**) malloc(nInd * sizeof(int64*));
-	for (int i=0; i<nInd; i++)
-		deltaDLinv[i] = (int64*) malloc(nInd * sizeof(int64));
-	for (int i=0; i<nInd; i++)
-		for (int j=0; j<nInd; j++)
-			deltaDLinv[i][j] = (delta / DLinv[i][j].den) * DLinv[i][j].num;
-	
-	// Computation of \delta'.D'.L'^{-1}
-	int64** deltaDLinvIm = (int64**) malloc(nDimOut * sizeof(int64*));
-	for (int i=0; i<nDimOut; i++)
-		deltaDLinvIm[i] = (int64*) malloc(nDimOut * sizeof(int64));
-	for (int i=0; i<nDimOut; i++)
-		for (int j=0; j<nDimOut; j++)
-			deltaDLinvIm[i][j] = (deltaIm / DLinvIm[i][j].den) * DLinvIm[i][j].num;
-	
-	
-	// Computation of L.D^{-1} and epsilon
+	// Computation of L.D^{-1}
 	rational64** LDinv = (rational64**) malloc(nInd * sizeof(rational64*));
 	for (int i=0; i<nInd; i++)
 		LDinv[i] = (rational64*) malloc(nInd * sizeof(rational64));
@@ -1049,10 +1134,18 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			LDinv[i][j] = simplify(temp);
 		}
 	
+	// Computation of QLDinv = Q.L.D^{-1} and DLinvImQLDinv = D'.L'^{-1}.Q.L.D^{-1}
+	rational64** Qrat = toRationalMatrix(linPart, nDimOut, nInd);
+	rational64** QLDinv = matrixMultiplication(Qrat, nDimOut, nInd, LDinv, nInd, nInd);
+	freeMatrix(Qrat, nDimOut);
+	rational64** DLinvImQLDinv = matrixMultiplication(DLinvIm, nDimOut, nDimOut, QLDinv, nDimOut, nInd);
+		
+	
+	// Computation of \epsilon, such that \epsilon.Q.L.D^{-1} is integral
 	int64 epsilon = 1;
 	for (int i=0; i<nInd; i++)
 		for (int j=0; j<nInd; j++)
-			epsilon = ppcm(epsilon, LDinv[i][j].den);
+			epsilon = ppcm(epsilon, QLDinv[i][j].den);
 	
 	
 	// Computation of LDinvIm = L'.D'^{-1} and epsilon'
@@ -1072,7 +1165,23 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	
 	
 	// DEBUG
-	//cout << "debug - end of precomputation " << endl;
+	//cout << "debug - end of precomputation" << endl;
+	
+	/* DEBUG - content check of everything precomputed
+	cout << "DLinv =" << endl;
+	printMatrix(DLinv, nInd, nInd);
+	cout << "DLinvIm =" << endl;
+	printMatrix(DLinvIm, nDimOut, nDimOut);
+	cout << "epsilon = " << epsilon << " | epsilonIm = " << epsilonIm << endl;
+	cout << "LDinv =" << endl;
+	printMatrix(LDinv, nInd, nInd);
+	cout << "QLDinv =" << endl;
+	printMatrix(QLDinv, nDimOut, nInd);
+	cout << "DLinvImQLDinv = " << endl;
+	printMatrix(DLinvImQLDinv, nDimOut, nInd);
+	cout << "LDinvIm =" << endl;
+	printMatrix(LDinvIm, nDimOut, nDimOut);
+	//*/
 	
 	
 	// Computation of kmin/kmax and kImmin/kImmax
@@ -1094,16 +1203,24 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	    linPart, paramPart, constPart, nDimOut, nInd, nParam,
 	    ineqEqPart_shape, linPart_shape, paramPart_shape, constPart_shape, nConstr_shape,
 	    ineqEqPart_shapeIm, linPart_shapeIm, paramPart_shapeIm, constPart_shapeIm, nConstr_shapeIm,
-	    int_lattice, den_lattice, delta,
-	    int_latticeIm, den_latticeIm, deltaIm,
+	    epsilon, LDinv, epsilonIm, LDinvIm,
 	    option);
 	
-	//* TODO DEBUG - kmin / kmax
+	// DEBUG
+	//cout << "End of k[Im][min/max] computation" << endl;
+		
+	/* DEBUG - kmin / kmax
+	cout << endl << endl;
 	cout << "DEBUG: kmin - kmax" << endl;
 	for (int i=0; i<nDimOut; i++)
 		cout << "kmin[" << i << "] = " << kmin[i] << "  |  kmax[" << i << "] = " << kmax[i] << endl;
 	cout << endl;
+	cout << "DEBUG: kImmin - kImmax" << endl;
+	for (int i=0; i<nDimOut; i++)
+		cout << "kImmin[" << i << "] = " << kImmin[i] << "  |  kImmax[" << i << "] = " << kImmax[i] << endl;
+	cout << endl;
 	//*/
+	
 	
 	// Note: we are iterating over the multi-dimensional bounding box [|\vec{kmin}; \vec{kmax}|]
 	//		=> We can improve the algorithm by only iterating over the feasible \vec{k} instead
@@ -1113,19 +1230,18 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	
 	int64* kCurr = (int64*) malloc(nDimOut * sizeof(int64));
 	int64* kImCurr = (int64*) malloc(nDimOut * sizeof(int64));
-	int64* z_alpha = (int64*) malloc(nInd * sizeof(int64));
 	int64* alpha = (int64*) malloc(nInd * sizeof(int64));
-	int64* z_alphaIm = (int64*) malloc(nDimOut * sizeof(int64));
 	int64* alphaIm = (int64*) malloc(nDimOut * sizeof(int64));
 	
-	// We have \delta'.\vec{\lambda'} + \vec{k'} = \delta.Q.\vec{\lambda} + R.\vec{p_b} + \vec{k}
+	// We have \epsilon'.LDinvIm.\vec{\lambda'} + \vec{k'} = \epsilon.Q.LDinv.\vec{\lambda} + R.\vec{p_b} + \vec{k}
 	//	=> By looking at the gcd of the whole equation, we can constraint (\vec{k} - \vec{k'})
 	// Note: gcdkminkIm must be a vector of strictly positive elements
 	int64* gcdkminkIm = (int64*) malloc(nDimOut * sizeof(int64));
 	for (int i=0; i<nDimOut; i++)		// Init/default case (for debugging/ignoring this optim)
 		gcdkminkIm[i] = 1;
 	
-	for (int i=0; i<nDimOut; i++) {
+	// TODO: redo that
+	/*for (int i=0; i<nDimOut; i++) {
 		// Gcd of \delta', R[i][*] and \delta.Q[i][*]
 		int64 tempGcd = deltaIm;
 		for (int j=0; j<nParam; j++)
@@ -1136,12 +1252,12 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 				tempGcd = gcd(tempGcd, delta * linPart[i][j]);
 		
 		gcdkminkIm[i] = tempGcd;
-	}
+	} */
+	// TODO: end redo
 	
-	// TODO DEBUG
-	cout << "gcdkminkIm = ";
-	printVector(gcdkminkIm, nDimOut);
-	cout << endl;
+	//cout << "gcdkminkIm = ";
+	//printVector(gcdkminkIm, nDimOut);
+	//cout << endl;
 	
 	
 	// Level 1 of iteration: kCurr
@@ -1154,7 +1270,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		kImCurr[i] = kImmin[i];
 	while (kImCurr[nDimOut-1]<=kImmax[nDimOut-1]) {
 	
-	// Skip criterion: (\vec{k} - \vec{k'}) must be a multiple of \vec{gcdkminkIm}
+	// Skip criterion on \vec{k} - \vec{k'}
 	bool skipkminkIm = false;
 	for (int i=0; i<nDimOut; i++) {
 		int64 diff = kCurr[i] - kImCurr[i];
@@ -1179,97 +1295,37 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	}
 	
 	
-	
-	// Level 3 of iterator: alpha, where \vec{0} \leq L.D^{-1}.\vec{\alpha} < \delta.\vec{1}
-	//			<=> alpha, where \vec{0} \leq deltaLDinv.\vec{\alpha} < \delta^2.\vec{1}
-	//
-	// Trick: we can transform L.D^{-1} into a integral invertible matrix by considering
-	//		the rectangle Q = { \vec{z} | \vec{0} \leq \vec{z} < \delta^2.\vec{1} }
-	//  ===> for every point \vec{z} of Q, compute deltaLDinv^{-1}.\vec{z}
-	//			=> If it is not integral, discard
-	//			=> If it is integral, (deltaLDinv^{-1}.\vec{z}) is a possible \alpha
-	
+	// Level 3 of iterator: alpha, where \vec{0} \leq \vec{\alpha} < \epsilon.\vec{1}
 	for (int i=0; i<nInd; i++)
-		z_alpha[i] = 0;
-	while (z_alpha[nInd-1]<delta*epsilon) {
-	
-	// Construction of alpha & skip of invalid z_alpha
-	// alpha = 1/epsilon * D.L^{-1} . z_alpha, when this quantity is integral
-	rational64* zalphaRat = toRationalVector(z_alpha, nInd);
-	rational64* alphaTemp = matVectProduct(DLinv, nInd, nInd, zalphaRat, nInd);
-	for (int i=0; i<nInd; i++)
-		alphaTemp[i] = multiplyRational(alphaTemp[i], invertRational(toRational(epsilon)));
-	
-	bool skipAlpha = false;
-	for (int i=0; i<nInd; i++)
-		if (alphaTemp[i].den!=1)
-			skipAlpha = true;
-	free(alphaTemp);
-	free(zalphaRat);
-	
-	if (skipAlpha) {
-		z_alpha[0]++;
-		for (int i=0; i<nInd; i++)
-			if (z_alpha[i]>epsilon*delta) {
-				z_alpha[i] = 0;
-				z_alpha[i+1]++;
-			}
-		continue;
-	}
-	
-	// TODO: skip criterion in relation to k ?
+		alpha[i] = 0;
+	while (alpha[nInd-1]<epsilon) {
 	
 	
-	// Level 4 of iterator: alpha', where \vec{0] \leq L'.D'^{-1}.\vec{\alpha'} < \delta'.\vec{1}
+	// Level 4 of iterator: alpha', where \vec{0] \leq \vec{\alpha'} < \epsilon'.\vec{1}
 	for (int i=0; i<nDimOut; i++)
-		z_alphaIm[i] = 0;
-	while(z_alphaIm[nDimOut-1]<deltaIm*epsilonIm) {
-		
-		// TODO: skip criterion in relation to k' ?
-		
-		
-		// Construction of alphaIm & skip of invalid z_alphaIm
-		rational64* zalphaRatIm = toRationalVector(z_alphaIm, nDimOut);
-		rational64* alphaTempIm = matVectProduct(DLinvIm, nDimOut, nDimOut, zalphaRatIm, nDimOut);
-		for (int i=0; i<nDimOut; i++)
-			alphaTempIm[i] = multiplyRational(alphaTempIm[i], invertRational(toRational(epsilonIm)));
-		
-		bool skipAlphaIm = false;
-		for (int i=0; i<nDimOut; i++)
-			if (alphaTempIm[i].den!=1)
-				skipAlphaIm = true;
-		free(alphaTempIm);
-		free(zalphaRatIm);
-	
-		if (skipAlphaIm) {
-			z_alphaIm[0]++;
-			for (int i=0; i<nDimOut; i++)
-				if (z_alphaIm[i]>epsilonIm*deltaIm) {
-					z_alphaIm[i] = 0;
-					z_alphaIm[i+1]++;
-				}
-			continue;
-		}
-		
+		alphaIm[i] = 0;
+	while(alphaIm[nDimOut-1]<epsilonIm) {
 		
 		// We build the branch of the piecewise affine function corresponding to (kCurr, kImCurr, alpha, alphaIm)
 		
-		// Precomputation of the following products:
-		//		- QLDinv = Q.L.D^{-1}
-		//		- DLinvImQLDinv = D'.L'^{-1}.Q.L.D^{-1}
-		rational64** Qrat = toRationalMatrix(linPart, nDimOut, nInd);
-		rational64** QLDinv = matrixMultiplication(Qrat, nDimOut, nInd, LDinv, nInd, nInd);
-		rational64** DLinvImQLDinv = matrixMultiplication(DLinvIm, nDimOut, nDimOut, QLDinv, nDimOut, nInd);
+		/* DEBUG
+		cout << "Branch [k, kIm, alpha, alphaIm] =" << endl;
+		cout << "\t [ ";
+		printVector(kCurr, nDimOut);
+		cout << "\t   ";
+		printVector(kImCurr, nDimOut);
+		cout << "\t   ";
+		printVector(alpha, nInd);
+		cout << "\t   ";
+		printVector(alphaIm, nDimOut);
+		cout << "\t]" << endl;
+		//*/
 		
-		freeMatrix(Qrat, nDimOut);
-		
-		rational64* ratAlpha = toRationalVector(alpha, nInd);
-		rational64* ratAlphaIm = toRationalVector(alphaIm, nDimOut);
 		
 		// Precomputation of LDinv.\alpha for the second row
+		rational64* ratAlpha = toRationalVector(alpha, nInd);
+		rational64* ratAlphaIm = toRationalVector(alphaIm, nDimOut);
 		rational64* LDinvalpha = matVectProduct(LDinv, nInd, nInd, ratAlpha, nInd);
-		
-		
 		
 		// Note: \vec{i_b} = \vec{\alpha} mod A <=> (\exist \lambda) \vec{i_b} = \vec{\alpha} + A.\lambda
 		//		If A^{-1} = 1/det . Ainv where "Ainv" is integral and "det" an integer, then
@@ -1279,24 +1335,16 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		
 		// In Polylib format, the matrix of input constraints is:
 		// 
-		// ( eq/ineq| i_b |  i_l  |  p_b  |    p_l    |     b     |  const )    <= Row to know which column corresponds to what...
+		// ( eq/ineq | i_b |  i_l  |  p_b  |    p_l    |     b     |  const )    <= Row to know which column corresponds to what...
 		// 
-		// [ shEq   |  0  |   shlin   | 0 |     0     |   shpar   |       sh_const     ]		// i_l \in shape
-		// [ shEqIm |  0  | shlinIm.Q | 0 | shlinIm.R |     X     | shconstIm+shlinIm.q]		// i'_l \in shapeIm
-		// [   1    |  0  |     Q     | 0 |     R     | Q.L.D^{-1}.\alpha-k   |   q    ]
-		// [   1    |  0  |    -Q     | 0 |    -R     | k+1-Q.L.D^{-1}.\alpha|  -q     ]
-		// [  detM  | Minv |    0     | 0 |     0     |     0     |   -Minv.\alpha     ]
-		// [ detM'  | Minv'|    0     | 0 |     0     |     0     |  -Minv'.\alpha'    ]
+		// [ shEq    |  0  |   shlin   | 0 |     0     |   shpar   |       sh_const     ]		// i_l \in shape
+		// [ shEqIm  |  0  | shlinIm.Q | 0 | shlinIm.R |     X     | shconstIm+shlinIm.q]		// i'_l \in shapeIm
+		// [   1     |  0  |     Q     | 0 |     R     | Q.L.D^{-1}.\alpha-k   |   q    ]		// def of k/k'
+		// [   1     |  0  |    -Q     | 0 |    -R     | k+1-Q.L.D^{-1}.\alpha|  -q     ]		// def of k/k'
+		// [\epsilon | Id  |     0     | 0 |     0     |     0     |      -\alpha       ]		// i_b = \alpha mod \epsilon
+		// [\epsilon'| Id  |     0     | 0 |     0     |     0     |      -\alpha'      ]		// TODO: correct that !!! (i'_b not i_b)
 		// where:
 		//		* X = shparIm + shlinIm(QLDinv.\alpha - LinvDIm.\alpha'+k'-k)
-		//		* A = \delta.D.L^{-1}
-		//		* det = det(A)  and Auninv = det * A^{-1}
-		//      * M = deltaDLinv and M^{-1} = 1/detM * Minv
-		//      * M' = \delta'.D'.L'^{-1} and M'^{-1} = 1/detM' * Minv'
-		//
-		// Note:
-		// \alpha = i_b mod (\delta . D. L^{-1})      <=> Minv.\alpha - Minv.i_b = 0 mod detM
-		// \alpha' = i'_b mod (\delta' . D'. L'^{-1}) <=> Minv'.\alpha' - Minv'.i_b' = 0 mod detM'
 		//		
 		// First column: 0=equality / 1 = inequality
 		// \alpha = blocked index parameter / ii = local index parameter
@@ -1367,7 +1415,6 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		free(tempVectb);
 		
 		
-		
 		// (Third rows)
 		for (int i=0; i<nDimOut; i++) {
 			inputConstrLongMat[nConstr_shape+nConstr_shapeIm+i][0] = 1;														// Eq/Ineq
@@ -1401,76 +1448,24 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][1+2*nInd+2*nParam] = tempRatb.num;						// b
 			inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][nCol_blConstr-1] = - constPart[i] * tempRatb.den;		// Const
 		}
-		
 		free(QLDinvalpha);
-		
-		
-		// Precomputation for the fifth row
-		rational64** MinvDivdetM = (rational64**) malloc(nInd * sizeof(rational64*));
-		for (int i=0; i<nInd; i++)
-			MinvDivdetM[i] = (rational64*) malloc(nInd * sizeof(rational64));
-		int64 detM = inverseDet(deltaDLinv, MinvDivdetM, nInd);
-		
-		int64** Minv = (int64**) malloc(nInd * sizeof(int64*));
-		for (int i=0; i<nInd; i++)
-			Minv[i] = (int64*) malloc(nInd * sizeof(int64));
-		for (int i=0; i<nInd; i++)
-			for (int j=0; j<nInd; j++) {
-				rational64 temp = MinvDivdetM[i][j];
-				temp = multiplyRational(temp, toRational(detM));
-				assert(temp.den==1);				// By construction of detM and MinvDivdetM
-				Minv[i][j] = temp.num;
-			}
-		freeMatrix(MinvDivdetM, nInd);
-		
 		
 		// (Fifth rows)
 		int offset_5r = nConstr_shape + nConstr_shapeIm + 2*nDimOut;
 		for (int i=0; i<nInd; i++) {
-			inputConstrLongMat[offset_5r+i][0] = detM;								// Eq/Ineq
-			for (int j=0; j<nInd; j++)
-				inputConstrLongMat[offset_5r+i][1+j] = Minv[i][j];					// i_b
-			
-			int64 temp = dotProduct(Minv[i], nInd, alpha, nInd);
-			inputConstrLongMat[offset_5r+i][nCol_blConstr-1] = -temp;				// Const
+			inputConstrLongMat[offset_5r+i][0] = epsilon;								// Eq/Ineq
+			inputConstrLongMat[offset_5r+i][1+i] = 1;									// i_b
+			inputConstrLongMat[offset_5r+i][nCol_blConstr-1] = -alpha[i];				// Const
 		}
-		
-		freeMatrix(Minv, nInd);
-		
-		
-		// Precomputation for the sixth row
-		rational64** MinvDivdetMIm = (rational64**) malloc(nDimOut * sizeof(rational64*));
-		for (int i=0; i<nDimOut; i++)
-			MinvDivdetMIm[i] = (rational64*) malloc(nDimOut * sizeof(rational64));
-		int64 detMIm = inverseDet(deltaDLinvIm, MinvDivdetMIm, nDimOut);
-		
-		int64** MinvIm = (int64**) malloc(nDimOut * sizeof(int64*));
-		for (int i=0; i<nDimOut; i++)
-			MinvIm[i] = (int64*) malloc(nDimOut * sizeof(int64));
-		for (int i=0; i<nDimOut; i++)
-			for (int j=0; j<nDimOut; j++) {
-				rational64 temp = MinvDivdetMIm[i][j];
-				temp = multiplyRational(temp, toRational(detMIm));
-				assert(temp.den==1);				// By construction of detMIm and MinvDivdetMIm
-				MinvIm[i][j] = temp.num;
-			}
-		freeMatrix(MinvDivdetMIm, nDimOut);
 		
 		// (Sixth rows)
 		for (int i=0; i<nDimOut; i++) {
-			inputConstrLongMat[offset_5r+nInd+i][0] = detMIm;						// Eq/Ineq
-			for (int j=0; j<nInd; j++)
-				inputConstrLongMat[offset_5r+nInd+i][1+j] = MinvIm[i][j];			// i_b
-			int64 temp = dotProduct(MinvIm[i], nInd, alphaIm, nInd);
-			inputConstrLongMat[offset_5r+nInd+i][nCol_blConstr-1] = -temp;			// Const
+			inputConstrLongMat[offset_5r+nInd+i][0] = epsilonIm;						// Eq/Ineq
+			inputConstrLongMat[offset_5r+nInd+i][1+i] = 1;								// i_b
+			inputConstrLongMat[offset_5r+nInd+i][nCol_blConstr-1] = -alphaIm[i];		// Const
 		}
 		
-		freeMatrix(MinvIm, nDimOut);
-		
-		
 		polyhedronMPP* polyRet = buildPolyhedron(inputConstrLongMat, nRow_blConstr, 2*nInd, 2*nParam+1);
-		
-		
 		
 		// The matrix of the affine function is:
 		// 
@@ -1503,6 +1498,11 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		for (int i=0; i<nDimOut; i++) {
 			// Doing the computations on the temporary corresponding rational row
 			rational64* tempRatRow = (rational64*) malloc(nColumn_relConstr * sizeof(rational64));
+			for (int j=0; j<nColumn_relConstr; j++) {
+				rational64 temp; temp.num=0; temp.den=1;
+				tempRatRow[j] = temp;
+			}
+			
 			for (int j=0; j<nInd; j++)						// \alpha
 				tempRatRow[j] = DLinvImQLDinv[i][j];
 			
@@ -1529,7 +1529,6 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			constElem = addRational(constElem, elemConstkCurr);
 			tempRatRow[nColumn_relConstr-1] = constElem;
 			
-			
 			// Divisor management (aka, going back to int64)
 			for (int j=0; j<nColumn_relConstr; j++)
 				tempRatRow[j] = simplify(tempRatRow[j]);
@@ -1549,13 +1548,15 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		}
 		
 		
-		
 		// (Second rows)
 		// [       0       | Q |     0     | R | Q.LDinv.\alpha - LDinvIm.\alpha'+k'-k    |     q      ]
 		for (int i=0; i<nDimOut; i++) {
 			// Doing the computations on the temporary corresponding rational row
 			rational64* tempRatRow = (rational64*) malloc(nColumn_relConstr * sizeof(rational64));
-		
+			for (int j=0; j<nColumn_relConstr; j++) {
+				rational64 temp; temp.num=0; temp.den=1;
+				tempRatRow[j] = temp;
+			}
 			for (int j=0; j<nInd; j++)
 				tempRatRow[nInd+j] = toRational(linPart[i][j]);
 			for (int j=0; j<nParam; j++)
@@ -1600,29 +1601,27 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		result.insert ( pair<polyhedronMPP*, affFuncMPP*>(polyRet, affFuncRet) );
 		
 		// Free temporary data structures
-		freeMatrix(QLDinv, nDimOut);
-		freeMatrix(DLinvImQLDinv, nDimOut);
 		free(LDinvalpha);
 		free(ratAlpha);
 		free(ratAlphaIm);
 		// End of construction of the branch
 		
 		
-		// "z_alphaIm++", with overflow propagation
-		z_alphaIm[0]++;
-		for (int i=0; i<nDimOut; i++)
-			if (z_alphaIm[i]>epsilonIm*deltaIm) {
-				z_alphaIm[i] = 0;
-				z_alphaIm[i+1]++;
+		// "alphaIm++", with overflow propagation
+		alphaIm[0]++;
+		for (int i=0; i<nDimOut-1; i++)
+			if (alphaIm[i]>=epsilonIm) {
+				alphaIm[i] = 0;
+				alphaIm[i+1]++;
 			}
 	} // End of while loop on alphaIm
 	
-	// "z_alpha++", with overflow propagation
-	z_alpha[0]++;
-	for (int i=0; i<nInd; i++)
-		if (z_alpha[i]>epsilon*delta) {
-			z_alpha[i] = 0;
-			z_alpha[i+1]++;
+	// "alpha++", with overflow propagation
+	alpha[0]++;
+	for (int i=0; i<nInd-1; i++)
+		if (alpha[i]>=epsilon) {
+			alpha[i] = 0;
+			alpha[i+1]++;
 		}
 	} // End of while loop on alpha
 	
@@ -1656,19 +1655,24 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	freeMatrix(paramPart_shape, nConstr_shape);
 	free(constPart_shape);
 	
-	freeMatrix(int_lattice, nInd);
-	free(den_lattice);
-	freeMatrix(DLinv, nInd);
-	freeMatrix(LDinv, nInd);
-	
 	freePolyhedron(shapeIm_noEq);
 	free(ineqEqPart_shapeIm);
 	freeMatrix(linPart_shapeIm, nConstr_shapeIm);
 	freeMatrix(paramPart_shapeIm, nConstr_shapeIm);
 	free(constPart_shapeIm);
 	
+	freeMatrix(int_lattice, nInd);
+	free(den_lattice);
 	freeMatrix(int_latticeIm, nDimOut);
 	free(den_latticeIm);
+	
+	
+	
+	freeMatrix(DLinv, nInd);
+	freeMatrix(LDinv, nInd);
+	freeMatrix(QLDinv, nDimOut);
+	freeMatrix(DLinvImQLDinv, nDimOut);
+	
 	freeMatrix(DLinvIm, nDimOut);
 	freeMatrix(LinvDIm, nDimOut);
 	freeMatrix(LDinvIm, nDimOut);

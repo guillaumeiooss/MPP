@@ -34,7 +34,7 @@ PipList* copy_pip_list(PipList* l) {
 
 // Sub-function of "merge_sols"
 PipVector* merge_row_sols(PipVector* row_then, PipVector* row_else, bool bmax) {
-	assert(row_then->nb_elements = row_else->nb_elements);
+	assert(row_then->nb_elements == row_else->nb_elements);
 	
 	// In our context, we are only looking at *integral* solutions
 	//	=> We can assume than the denominator is always a vector of 0s (apparently encoded like that)
@@ -283,8 +283,8 @@ rational64** lexmin(polyhedronMPP *poly, int64** context, int nrow_context, int 
 
 // Aux function which builds {x,z | x \in dom && z = obj(x) }
 polyhedronMPP* build_lexminmax_poly(affFuncMPP *obj, polyhedronMPP *dom) {
-	assert(dom->nParam=obj->nParam);
-	assert(dom->nInd=obj->nInd);
+	assert(dom->nParam==obj->nParam);
+	assert(dom->nInd==obj->nInd);
 	for (int i=0; i<obj->dimOut; i++)
 		assert(obj->divs[i]==1);
 	
@@ -326,6 +326,7 @@ polyhedronMPP* build_lexminmax_poly(affFuncMPP *obj, polyhedronMPP *dom) {
 	}
 	
 	polyhedronMPP* retPoly = buildPolyhedron(matConstr, nRow_matConstr, dim_x+dim_z, nParam);
+	
 	return retPoly;
 }
 

@@ -660,13 +660,10 @@ void test_MPP_Gen_Func_Ex1() {
 	
 	map<polyhedronMPP*, affFuncMPP*> resultFunc = getTiledFunction(affScalar,
 			shapeIn, latticeIn, shapeOut, latticeOut, opt);
+	
 	printoutFunction(resultFunc);
 	
-	// TODO: bugs:
-	//		- kmin/kmax: wrong values
-	//		- values too big on matrices => were does it comes from?
-	//		- implement skips of iterations to avoid having too many branches
-	
+	// TODO: finish to check these values
 	
 	// Note: \vec{\alpha} = \vec{\alpha'} = \vec{0}  (no non-integral tile origin)
 	
