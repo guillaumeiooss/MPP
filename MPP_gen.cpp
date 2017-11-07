@@ -1452,17 +1452,29 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		
 		// (Fifth rows)
 		int offset_5r = nConstr_shape + nConstr_shapeIm + 2*nDimOut;
-		for (int i=0; i<nInd; i++) {
-			inputConstrLongMat[offset_5r+i][0] = epsilon;								// Eq/Ineq
-			inputConstrLongMat[offset_5r+i][1+i] = 1;									// i_b
-			inputConstrLongMat[offset_5r+i][nCol_blConstr-1] = -alpha[i];				// Const
+		if (epsilon==1) {		// No constraint => fill this part of the array with "0=0"
+			// Nothing (already initialized with 0s)
+		} else {
+			for (int i=0; i<nInd; i++) {
+				inputConstrLongMat[offset_5r+i][0] = epsilon;								// Eq/Ineq
+				inputConstrLongMat[offset_5r+i][1+i] = 1;									// i_b
+				inputConstrLongMat[offset_5r+i][nCol_blConstr-1] = -alpha[i];				// Const
+			}
 		}
 		
 		// (Sixth rows)
-		for (int i=0; i<nDimOut; i++) {
-			inputConstrLongMat[offset_5r+nInd+i][0] = epsilonIm;						// Eq/Ineq
-			inputConstrLongMat[offset_5r+nInd+i][1+i] = 1;								// i_b
-			inputConstrLongMat[offset_5r+nInd+i][nCol_blConstr-1] = -alphaIm[i];		// Const
+		if (epsilonIm==1) {		// No constraint => fill this part of the array with "0=0"
+			// Nothing (already initialized with 0s)
+		} else {
+			for (int i=0; i<nDimOut; i++) {
+				inputConstrLongMat[offset_5r+nInd+i][0] = epsilonIm;						// Eq/Ineq
+				inputConstrLongMat[offset_5r+nInd+i][1+i] = 1;								// i_b
+				
+				// TODO: correct that into i'_b
+				
+				
+				inputConstrLongMat[offset_5r+nInd+i][nCol_blConstr-1] = -alphaIm[i];		// Const
+			}
 		}
 		
 		polyhedronMPP* polyRet = buildPolyhedron(inputConstrLongMat, nRow_blConstr, 2*nInd, 2*nParam+1);
