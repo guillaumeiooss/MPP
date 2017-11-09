@@ -1134,12 +1134,15 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			LDinv[i][j] = simplify(temp);
 		}
 	
-	// Computation of QLDinv = Q.L.D^{-1} and DLinvImQLDinv = D'.L'^{-1}.Q.L.D^{-1}
+	// Computation of QLDinv = Q.L.D^{-1}, DLinvImQLDinv = D'.L'^{-1}.Q.L.D^{-1}
+	// and DLinvImR = DLinvIm.R
 	rational64** Qrat = toRationalMatrix(linPart, nDimOut, nInd);
 	rational64** QLDinv = matrixMultiplication(Qrat, nDimOut, nInd, LDinv, nInd, nInd);
 	freeMatrix(Qrat, nDimOut);
 	rational64** DLinvImQLDinv = matrixMultiplication(DLinvIm, nDimOut, nDimOut, QLDinv, nDimOut, nInd);
-		
+	rational64** paramPartRat = toRationalMatrix(paramPart, nDimOut, nParam);
+	rational64** DLinvImR = matrixMultiplication(DLinvIm, nDimOut, nDimOut, paramPartRat, nDimOut, nParam);
+	freeMatrix(paramPartRat, nDimOut);
 	
 	// Computation of \epsilon, such that \epsilon.Q.L.D^{-1} is integral
 	int64 epsilon = 1;
@@ -1157,6 +1160,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			rational64 temp; temp.num = int_latticeIm[i][j]; temp.den = den_latticeIm[i];
 			LDinvIm[i][j] = simplify(temp);
 		}
+	
 	
 	int64 epsilonIm = 1;
 	for (int i=0; i<nDimOut; i++)
@@ -1179,6 +1183,8 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	printMatrix(QLDinv, nDimOut, nInd);
 	cout << "DLinvImQLDinv = " << endl;
 	printMatrix(DLinvImQLDinv, nDimOut, nInd);
+	cout << "DLinvImR = " << endl;
+	printMatrix(DLinvImR, nDimOut, nParam);
 	cout << "LDinvIm =" << endl;
 	printMatrix(LDinvIm, nDimOut, nDimOut);
 	//*/
@@ -1342,7 +1348,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		// [   1     |  0  |     Q     | 0 |     R     | Q.L.D^{-1}.\alpha-k   |   q    ]		// def of k/k'
 		// [   1     |  0  |    -Q     | 0 |    -R     | k+1-Q.L.D^{-1}.\alpha|  -q     ]		// def of k/k'
 		// [\epsilon | Id  |     0     | 0 |     0     |     0     |      -\alpha       ]		// i_b = \alpha mod \epsilon
-		// [\epsilon'| Id  |     0     | 0 |     0     |     0     |      -\alpha'      ]		// TODO: correct that !!! (i'_b not i_b)
+		// [\epsilon'| Id  |     0     | 0 |     0     |     0     |      -\alpha'      ]		// i'_b = \alpha' mod \epsilon'
 		// where:
 		//		* X = shparIm + shlinIm(QLDinv.\alpha - LinvDIm.\alpha'+k'-k)
 		//		
@@ -1350,7 +1356,11 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		// \alpha = blocked index parameter / ii = local index parameter
 		// \rho = blocked parameters / pp = local parameters / b = block size parameter
 		
-		int nRow_blConstr = nConstr_shape + nConstr_shapeIm + 2*nDimOut + nInd + nDimOut;
+		int nRow_blConstr = nConstr_shape + nConstr_shapeIm + 2*nDimOut;
+		if (epsilon!=1)
+			nRow_blConstr += nInd;
+		if (epsilonIm!=1)
+			nRow_blConstr += nDimOut;
 		int nCol_blConstr = 2*nInd+2*nParam+3;
 		
 		int64** inputConstrLongMat = (int64**) malloc(nRow_blConstr * sizeof(int64*));
@@ -1462,18 +1472,54 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			}
 		}
 		
+		
 		// (Sixth rows)
+		int offset_6r = offset_5r + ((epsilon==1)?0:nInd);
 		if (epsilonIm==1) {		// No constraint => fill this part of the array with "0=0"
 			// Nothing (already initialized with 0s)
 		} else {
 			for (int i=0; i<nDimOut; i++) {
-				inputConstrLongMat[offset_5r+nInd+i][0] = epsilonIm;						// Eq/Ineq
-				inputConstrLongMat[offset_5r+nInd+i][1+i] = 1;								// i_b
+				rational64* tempRatRow = (rational64*) malloc(nCol_blConstr * sizeof(rational64));
+				for (int j=0; j<nCol_blConstr; j++) {
+					rational64 temp; temp.num = 0; temp.den = 1;
+					tempRatRow[j] = temp;
+				}
+					
+				tempRatRow[0] = toRational(epsilonIm);						// Eq/Ineq
+				for (int j=0; j<nInd; j++)
+					tempRatRow[1+j] = DLinvImQLDinv[i][j];					// i_b
+				for (int j=0; j<nParam; j++)
+					tempRatRow[1+2*nInd+j] = DLinvImR[i][j];				// p_b
 				
-				// TODO: correct that into i'_b
+				// Const: "-DLinvImQLDinv.\alpha + DLinvIm.(k - k')"
+				int64* kminuskIm = (int64*) malloc(nDimOut * sizeof(int64*));
+				for (int i=0; i<nDimOut; i++)
+					kminuskIm[i] = kCurr[i] - kImCurr[i];
+				rational64* ratKminuskIm = toRationalVector(kminuskIm, nDimOut);
+				rational64 constElem = dotProduct(DLinvIm[i], ratKminuskIm, nDimOut);
+				
+				rational64 elemConstAlpha = dotProduct(DLinvImQLDinv[i], ratAlpha, nInd);
+				constElem = subRational(constElem, elemConstAlpha);
+				tempRatRow[nCol_blConstr-1] = constElem;				// Const
 				
 				
-				inputConstrLongMat[offset_5r+nInd+i][nCol_blConstr-1] = -alphaIm[i];		// Const
+				// Divisor management (aka, going back to int64)
+				for (int j=0; j<nCol_blConstr; j++)
+					tempRatRow[j] = simplify(tempRatRow[j]);
+				
+				int64 commonDiv = 1;
+				for (int j=0; j<nCol_blConstr; j++)
+					commonDiv = ppcm(commonDiv, tempRatRow[j].den);
+				
+				// Filling the row
+				inputConstrLongMat[offset_6r+i][0] = epsilonIm * commonDiv;					// Eq/Ineq
+				for (int j=1; j<nCol_blConstr; j++)
+					inputConstrLongMat[offset_6r+i][j] = (commonDiv/tempRatRow[j].den) * tempRatRow[j].num;
+				
+				// Free temporary structure
+				free(tempRatRow);
+				free(kminuskIm);
+				free(ratKminuskIm);
 			}
 		}
 		
@@ -1481,7 +1527,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		
 		// The matrix of the affine function is:
 		// 
-		// (    \alpha     |ii |   \rho    |pp |     b         | const)    <= Row to know which column corresponds to what...
+		// (      i_b      |i_l|    p_b    |p_l|     b         | const)    <= Row to know which column corresponds to what...
 		// [ DLinvImQLDinv | 0 | DLinvIm.R | 0 |  0  | \alpha'-DLinvImQLDinv.\alpha + DLinvIm.(k - k') ]
 		// [       0       | Q |     0     | R | Q.LDinv.\alpha - LDinvIm.\alpha'+k'-k    |     q      ]
 		//	where:
@@ -1518,13 +1564,8 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			for (int j=0; j<nInd; j++)						// \alpha
 				tempRatRow[j] = DLinvImQLDinv[i][j];
 			
-			for (int j=0; j<nParam; j++) {					// \rho
-				// Computing in place DLinvIm*R
-				rational64 temp = toRational(0);
-				for (int k=0; k<nDimOut; k++)
-					temp = addRational(temp, multiplyRational(DLinvIm[i][k], toRational(paramPart[k][j])));
-				tempRatRow[2*nInd+j] = temp;
-			}
+			for (int j=0; j<nParam; j++)					// \rho
+				tempRatRow[2*nInd+j] = DLinvImR[i][j];
 			
 			// constElem = \alpha' - DLinvImQLDinv.\alpha + DLinvIm.(k - k') 
 			rational64 constElem = toRational(alphaIm[i]);
@@ -1684,6 +1725,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	freeMatrix(LDinv, nInd);
 	freeMatrix(QLDinv, nDimOut);
 	freeMatrix(DLinvImQLDinv, nDimOut);
+	freeMatrix(DLinvImR, nDimOut);
 	
 	freeMatrix(DLinvIm, nDimOut);
 	freeMatrix(LinvDIm, nDimOut);

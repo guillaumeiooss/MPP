@@ -660,12 +660,13 @@ void test_MPP_Gen_Func_Ex1() {
 	
 	map<polyhedronMPP*, affFuncMPP*> resultFunc = getTiledFunction(affScalar,
 			shapeIn, latticeIn, shapeOut, latticeOut, opt);
+	// Note: \vec{\alpha} = \vec{\alpha'} = \vec{0}  (no non-integral tile origin)
 	
 	printoutFunction(resultFunc);
 	
 	// TODO: finish to check these values
 	
-	// Note: \vec{\alpha} = \vec{\alpha'} = \vec{0}  (no non-integral tile origin)
+	
 	
 	
 }
@@ -693,6 +694,8 @@ int main() {
 	
 	//test_MPP_Gen_Poly_Ex1();
 	test_MPP_Gen_Func_Ex1();
+	
+	// TODO: test rectangular tiling in the general case... :)
 	
 	// TODO: other test for the polyhedron case
 	
