@@ -616,12 +616,8 @@ void test_MPP_Gen_Func_Ex1() {
 	int64** mat = (int64**) malloc(dimOut * sizeof(int64*));
 	for (int i=0; i<dimOut; i++)
 		mat[i] = (int64*) malloc((nInd+nParam+1)* sizeof(int64));
-	mat[0][0] = 1;
-	mat[0][1] = 0;
-	mat[0][2] = 0;
-	mat[1][0] = 0;
-	mat[1][1] = 1;
-	mat[1][2] = 0;
+	mat[0][0] = 1; mat[0][1] = 0; mat[0][2] = 0;
+	mat[1][0] = 0; mat[1][1] = 1; mat[1][2] = 0;
 	affFuncMPP *affScalar = buildAffineFunction(mat, dimOut, nInd, nParam);
 	
 	// Input space partitioning
@@ -666,10 +662,172 @@ void test_MPP_Gen_Func_Ex1() {
 	
 	// TODO: finish to check these values
 	
+}
+
+void test_MPP_Gen_Func_Ex2() {
+	// Exemple 2: we reuse the rectangular example from test_MPP_FuncEx2()
+	// (i,j -> i+j, i)
+	int nInd = 2;
+	int nParam = 1;
+	int dimOut = 2;
 	
+	int64** mat = (int64**) malloc(dimOut * sizeof(int64*));
+	for (int i=0; i<dimOut; i++)
+		mat[i] = (int64*) malloc((nInd+nParam+1)* sizeof(int64));
+	mat[0][0] = 1; mat[0][1] = 1; mat[0][2] = 0; mat[0][3] = 0;
+	mat[1][0] = 1; mat[1][1] = 0; mat[1][2] = 0; mat[1][3] = 0;
+	affFuncMPP *affScalar = buildAffineFunction(mat, dimOut, nInd, nParam);
 	
+	int64* scale = (int64*) malloc(nInd*sizeof(int64));
+	scale[0] = 1; scale[1] = 2;
+	polyhedronMPP *shapeIn = rectangularShape(scale, 2);
+	int64** latticeIn = rectangularOriginLattice(scale, 2);
+	
+	int64* scaleIm = (int64*) malloc(dimOut*sizeof(int64));
+	scaleIm[0] = 1; scaleIm[1] = 2;
+	polyhedronMPP *shapeOut = rectangularShape(scaleIm, 2);
+	int64** latticeOut = rectangularOriginLattice(scaleIm, 2);
+	
+	optionMPP* opt = (optionMPP*) malloc(sizeof(optionMPP));
+	opt->kMinMaxOption = 0;
+	opt->areParamDiv = false;
+	opt->minBlSizeParam = 3;
+	opt->errorIfModulo = false;
+	
+	map<polyhedronMPP*, affFuncMPP*> resultFunc = getTiledFunction(affScalar,
+			shapeIn, latticeIn, shapeOut, latticeOut, opt);
+	
+	printoutFunction(resultFunc);
+	
+	// TODO: check these results
+	
+	/*
+	6 branches:
+IF
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 0 1 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 1 -1 )
+		( 1 0 0 0 -1 0 0 2 -1 )
+		( 1 0 0 1 1 0 0 0 0 )
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 -1 -1 0 0 1 -1 )
+		( 1 0 0 -1 0 0 0 2 -1 )
+		( 1 0 0 1 1 0 0 0 0 )
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 1 0 )
+		( 1 0 0 0 0 0 0 1 0 )
+
+	THEN
+		( 1 2 0 0 0 0 0 0 )
+		( 1 0 0 0 0 0 0 0 ) / 2
+		( 0 0 1 1 0 0 0 0 )
+		( 0 0 1 0 0 0 0 0 )
+
+IF
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 0 1 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 1 -1 )
+		( 1 0 0 0 -1 0 0 2 -1 )
+		( 1 0 0 1 1 0 0 0 0 )
+		( 1 0 0 1 0 0 0 1 0 )
+		( 1 0 0 -1 -1 0 0 1 -1 )
+		( 1 0 0 -1 0 0 0 1 -1 )
+		( 1 0 0 1 1 0 0 0 0 )
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 1 0 )
+		( 1 0 0 0 0 0 0 1 0 )
+
+	THEN
+		( 1 2 0 0 0 0 0 0 )
+		( 1 0 0 0 0 0 0 -1 ) / 2
+		( 0 0 1 1 0 0 0 0 )
+		( 0 0 1 0 0 0 1 0 )
+
+IF
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 0 1 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 1 -1 )
+		( 1 0 0 0 -1 0 0 2 -1 )
+		( 1 0 0 1 1 0 0 -1 0 )
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 -1 -1 0 0 2 -1 )
+		( 1 0 0 -1 0 0 0 2 -1 )
+		( 1 0 0 1 1 0 0 -1 0 )
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 2 0 )
+		( 1 0 0 0 0 0 0 1 0 )
+
+	THEN
+		( 1 2 0 0 0 0 0 1 )
+		( 1 0 0 0 0 0 0 0 ) / 2
+		( 0 0 1 1 0 0 -1 0 )
+		( 0 0 1 0 0 0 0 0 )
+
+IF
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 0 1 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 1 -1 )
+		( 1 0 0 0 -1 0 0 2 -1 )
+		( 1 0 0 1 1 0 0 -1 0 )
+		( 1 0 0 1 0 0 0 1 0 )
+		( 1 0 0 -1 -1 0 0 2 -1 )
+		( 1 0 0 -1 0 0 0 1 -1 )
+		( 1 0 0 1 1 0 0 -1 0 )
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 2 0 )
+		( 1 0 0 0 0 0 0 1 0 )
+
+	THEN
+		( 1 2 0 0 0 0 0 1 )
+		( 1 0 0 0 0 0 0 -1 ) / 2
+		( 0 0 1 1 0 0 -1 0 )
+		( 0 0 1 0 0 0 1 0 )
+
+IF
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 0 1 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 1 -1 )
+		( 1 0 0 0 -1 0 0 2 -1 )
+		( 1 0 0 1 1 0 0 -2 0 )
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 -1 -1 0 0 3 -1 )
+		( 1 0 0 -1 0 0 0 2 -1 )
+		( 1 0 0 1 1 0 0 -2 0 )
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 3 0 )
+		( 1 0 0 0 0 0 0 1 0 )
+
+	THEN
+		( 1 2 0 0 0 0 0 2 )
+		( 1 0 0 0 0 0 0 0 ) / 2
+		( 0 0 1 1 0 0 -2 0 )
+		( 0 0 1 0 0 0 0 0 )
+
+IF
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 0 1 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 1 -1 )
+		( 1 0 0 0 -1 0 0 2 -1 )
+		( 1 0 0 1 1 0 0 -2 0 )
+		( 1 0 0 1 0 0 0 1 0 )
+		( 1 0 0 -1 -1 0 0 3 -1 )
+		( 1 0 0 -1 0 0 0 1 -1 )
+		( 1 0 0 1 1 0 0 -2 0 )
+		( 1 0 0 1 0 0 0 0 0 )
+		( 1 0 0 -1 0 0 0 3 0 )
+		( 1 0 0 0 0 0 0 1 0 )
+
+	THEN
+		( 1 2 0 0 0 0 0 2 )
+		( 1 0 0 0 0 0 0 -1 ) / 2
+		( 0 0 1 1 0 0 -2 0 )
+		( 0 0 1 0 0 0 1 0 )
+
+	*/
 	
 }
+
+
 
 
 /* ------------------------------------------ */
@@ -693,11 +851,10 @@ int main() {
 	//test_shape_para_1();
 	
 	//test_MPP_Gen_Poly_Ex1();
-	test_MPP_Gen_Func_Ex1();
+	//test_MPP_Gen_Func_Ex1();
+	test_MPP_Gen_Func_Ex2();
 	
-	// TODO: test rectangular tiling in the general case... :)
-	
-	// TODO: other test for the polyhedron case
+	// TODO: other test for the general case
 	
 	return 0;
 }

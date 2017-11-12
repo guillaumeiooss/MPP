@@ -1638,7 +1638,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			for (int j=0; j<nColumn_relConstr; j++)
 				commonDiv = ppcm(commonDiv, tempRatRow[j].den);
 			
-			divConstrLongMat[i] = commonDiv;
+			divConstrLongMat[nDimOut+i] = commonDiv;
 			for (int j=0; j<nColumn_relConstr; j++)
 				relationConstrLongMat[nDimOut+i][j] = (commonDiv/tempRatRow[j].den) * tempRatRow[j].num;
 			// Guarranty that the division on the last line is integral
