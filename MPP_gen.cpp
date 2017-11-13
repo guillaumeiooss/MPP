@@ -1452,9 +1452,9 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			rational64 tempRatb = subRational(toRational(kCurr[i]+1), QLDinvalpha[i]);
 			
 			for (int j=0; j<nInd; j++)
-				inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][1+nInd+i] = -linPart[i][j] * tempRatb.den;			// i_l
+				inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][1+nInd+j] = -linPart[i][j] * tempRatb.den;			// i_l
 			for (int j=0; j<nParam; j++)
-				inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][1+2*nInd+nParam+i] = -paramPart[i][j]*tempRatb.den;	// p_l
+				inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][1+2*nInd+nParam+j] = -paramPart[i][j]*tempRatb.den;	// p_l
 			inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][1+2*nInd+2*nParam] = tempRatb.num;						// b
 			inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][nCol_blConstr-1] = - constPart[i] * tempRatb.den;		// Const
 		}
