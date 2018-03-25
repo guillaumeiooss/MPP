@@ -223,5 +223,9 @@ void extractRationalAffFunc(affFuncMPP* affFunc, int64** linPart, int64** paramP
 // Given a polyhedron and a matrix, compute the resulting polyhedron after a change of basis
 polyhedronMPP* changeOfBasis(polyhedronMPP* poly, affFuncMPP* affFunc);
 
+
+// Get the isl relation representation of an affine function
+int64** getRelationRepresentation(affFuncMPP* func);
+
 #endif
 

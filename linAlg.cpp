@@ -997,6 +997,41 @@ polyhedronMPP* changeOfBasis(polyhedronMPP* poly, affFuncMPP* affFunc) {
 }
 
 
+
+// Get the isl relation representation of an affine function
+int64** getRelationRepresentation(affFuncMPP* func) {
+	int dimOut = func->dimOut;
+	int dimIn = func->nInd;
+	int nParam = func->nParam;
+	
+	int nColRelation = dimIn + dimOut + nParam + 1;
+	
+	int64** matRelation = (int64**) malloc(dimOut * sizeof(int64*));
+	for (int i=0; i<dimOut; i++)
+		matRelation[i] = (int64*) malloc(nColRelation * sizeof(int64));
+	
+	// Order of the indexes: [src iterators|dest iterators | params |const]
+	for (int i=0; i<dimOut; i++) {
+		// Input dimensions
+		for (int j=0; j<dimIn; j++)
+			matRelation[i][j] = func->affFuncScalar[i][j];
+
+		// Output dimensions
+		for (int j=0; j<dimOut; j++)
+			matRelation[i][dimIn+j] = 0;
+		matRelation[i][dimIn+i] = func->divs[i];
+
+		// Parameters & constant
+		for (int j=0; j<nParam+1; j++)
+			matRelation[i][dimIn+dimOut+j] = func->affFuncScalar[i][dimIn+j];
+	}
+
+	return matRelation;
+}
+
+
+
+
 polyhedronMPP* rectangularShape(int64* sizes, int nDim) {
 	int nConstr = 2*nDim;
 	int nCol_mat = 2+nDim+1;
