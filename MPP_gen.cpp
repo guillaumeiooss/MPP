@@ -146,6 +146,9 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		int64** mat_objfunc = (int64**) malloc(nRow_mat_objfunc * sizeof(int64*));
 		for (int i=0; i<nRow_mat_objfunc; i++)
 			mat_objfunc[i] = (int64*) malloc(nCol_mat_objfunc * sizeof(int64));
+		for (int i=0; i<nRow_mat_objfunc; i++)
+			for (int j=0; j<nCol_mat_objfunc; j++)
+				mat_objfunc[i][j] = 0;
 		
 		for (int j=0; j<nInd; j++)
 			mat_objfunc[0][j] = linPart[c][j];				// i_l
@@ -154,7 +157,7 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		mat_objfunc[0][nCol_mat_objfunc-1] = constPart[c];	// const
 		
 		affFuncMPP* obj_func = buildAffineFunction(mat_objfunc, 1, nInd+nParam, 1);
-		
+
 		rational64** max_1 = max(obj_func, constr_ilpl);
 		// max_1 is a 1*2 matrix (first col: b / second col: const)
 		
@@ -236,7 +239,7 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		kmin[c] = min_final;
 		
 		// DEBUG
-		//cout << "min1 = " << min1 << " | min2 = " << min2 << " | min3 = " << min3 << endl << endl;
+		cout << "min1 = " << min1 << " | min2 = " << min2 << " | min3 = " << min3 << endl << endl;
 		
 		// Free temporary structures
 		freeAffineFunction(obj_func);
@@ -270,7 +273,9 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	//	=> We return a similar polyhedron (with the right amount of parameters)
 	if (nInd==0) {
 		int64** matConst = (int64**) malloc(1 * sizeof(int64*));
-		matConst[0] = (int64*) calloc( (3+2*nParam) * sizeof(int64));
+		matConst[0] = (int64*) malloc( (3+2*nParam) * sizeof(int64));
+		for (int i=0; i<3+2*nParam; i++)
+			matConst[0][i] = 0;
 		polyhedronMPP* nullPoly = buildPolyhedron(matConst, 1, 0, 1+2*nParam);
 		
 		list<polyhedronMPP*> templist;

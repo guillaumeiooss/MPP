@@ -707,6 +707,43 @@ void test_MPP_Gen_Func_Ex2() {
 	
 }
 
+/* ------------------------------------------ */
+
+void debug_MPP_Gen_Poly_1() {
+	// { i,j | 0<=i,j<=10 } with square tiles of size b*b
+	int nInd = 2;
+	int nParam = 0;
+	int nConstr = 4;
+	
+	int64** mat = (int64**) malloc(nConstr * sizeof(int64*));
+	for (int i=0; i<nConstr; i++)
+		mat[i] = (int64*) malloc((2+nInd+nParam)* sizeof(int64));
+	mat[0][0] = 1; mat[0][1] =  1; mat[0][2] =  0; mat[0][3] =  0;
+	mat[1][0] = 1; mat[1][1] = -1; mat[1][2] =  0; mat[1][3] = 10;
+	mat[2][0] = 1; mat[2][1] =  0; mat[2][2] =  1; mat[2][3] =  0;
+	mat[3][0] = 1; mat[3][1] =  0; mat[3][2] = -1; mat[3][3] = 10;
+	polyhedronMPP *polyScalar = buildPolyhedron(mat, nConstr, nInd, nParam);
+	
+	int64* scale = (int64*) malloc(nInd*sizeof(int64));
+	scale[0] = 1; scale[1] = 1;
+	polyhedronMPP* shape = rectangularShape(scale, nInd);
+	
+	int64** lattice = (int64**) malloc( (nInd+1) * sizeof(int64*));
+	for (int i=0; i<nInd+1; i++)
+		lattice[i] = (int64*) malloc(nInd * sizeof(int64));
+	lattice[0][0] = 1; lattice[0][1] = 0;
+	lattice[1][0] = 0; lattice[1][1] = 1;
+	lattice[2][0] = 1; lattice[2][1] = 1;
+	
+	optionMPP* opt = (optionMPP*) malloc(sizeof(optionMPP));
+	opt->kMinMaxOption = 0;
+	opt->areParamDiv = false;
+	opt->minBlSizeParam = 3;
+	
+	list<list<polyhedronMPP*> > resultDom = getTiledDomain(polyScalar, shape, lattice, opt);
+	printoutDomain(resultDom);
+
+}
 
 
 
@@ -731,11 +768,15 @@ int main() {
 	//test_shape_para_1();
 	
 	//test_MPP_Gen_Poly_Ex1();
-	test_MPP_Gen_Func_Ex1();
+	//test_MPP_Gen_Func_Ex1();
 	//test_MPP_Gen_Func_Ex2();
 	
 	// TODO: other test for the general case
 	
+
+	// DEBUG
+	debug_MPP_Gen_Poly_1();
+
 	return 0;
 }
 
