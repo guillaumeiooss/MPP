@@ -52,5 +52,13 @@ list<list<polyhedronMPP*> > getRectangularTiledDomain(polyhedronMPP *polyScalar,
 //		the second element of the pair is the value of the function on the branch.
 map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScalar, int64 *scale, int64 *scaleIm, optionMPP *option);
 
+
+
+// Monoparametric tiling applied to a polyhedron
+//	- "hyperplanes" (the additional argument compared to getRectangularTiledDomain) is defining the tile shape
+//		using a set of unimodular hyperplanes vectors.
+list<list<polyhedronMPP*> > getRectangularCoBTiledFunction(polyhedronMPP* polyScalar, int64 **hyperplanes,
+		int64 *scale, optionMPP* option);
+
 #endif
 

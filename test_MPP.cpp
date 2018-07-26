@@ -731,8 +731,8 @@ int main() {
 	//test_shape_para_1();
 	
 	//test_MPP_Gen_Poly_Ex1();
-	//test_MPP_Gen_Func_Ex1();
-	test_MPP_Gen_Func_Ex2();
+	test_MPP_Gen_Func_Ex1();
+	//test_MPP_Gen_Func_Ex2();
 	
 	// TODO: other test for the general case
 	

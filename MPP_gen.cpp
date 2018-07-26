@@ -270,7 +270,7 @@ list<list<polyhedronMPP*> > getTiledDomain(polyhedronMPP *polyScalar, polyhedron
 	//	=> We return a similar polyhedron (with the right amount of parameters)
 	if (nInd==0) {
 		int64** matConst = (int64**) malloc(1 * sizeof(int64*));
-		matConst[0] = (int64*) malloc( (3+2*nParam) * sizeof(int64));
+		matConst[0] = (int64*) calloc( (3+2*nParam) * sizeof(int64));
 		polyhedronMPP* nullPoly = buildPolyhedron(matConst, 1, 0, 1+2*nParam);
 		
 		list<polyhedronMPP*> templist;

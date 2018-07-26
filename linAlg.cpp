@@ -1019,7 +1019,7 @@ int64** getRelationRepresentation(affFuncMPP* func) {
 		// Output dimensions
 		for (int j=0; j<dimOut; j++)
 			matRelation[i][dimIn+j] = 0;
-		matRelation[i][dimIn+i] = func->divs[i];
+		matRelation[i][dimIn+i] = - func->divs[i];
 
 		// Parameters & constant
 		for (int j=0; j<nParam+1; j++)

@@ -667,3 +667,89 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 }
 
 
+// Rectangular case with CoB
+list<list<polyhedronMPP*> > getRectangularCoBTiledFunction(polyhedronMPP* polyScalar, int64 **hyperplanes,
+	int64 *scale, optionMPP* option) {
+
+	int nInd = polyScalar->nInd;
+	int nParam = polyScalar->nParam;
+
+	// 1) Applying the change of basis to get a rectangular domain
+	rational64** invHypRat = (rational64**) malloc(nInd * sizeof(rational64*));
+	for (int i=0; i<nInd; i++)
+		invHypRat[i] = (rational64*) malloc(nInd * sizeof(rational64));
+
+	int det = inverseDet(hyperplanes, invHypRat, nInd);
+	assert(abs(det)==1);
+	int64** invHyp = toIntegralMatrix(invHypRat, nInd, nInd);
+
+	// funcCob is the one where linear part is invHyp
+	int nColmatFuncCob = nInd + nParam + 1;
+	int64** matFuncCob = (int64**) malloc(nInd * sizeof(int64*));
+	for (int i=0; i<nInd; i++)
+		matFuncCob[i] = (int64*) malloc(nColmatFuncCob * sizeof(int64));
+	for (int i=0; i<nInd; i++) {
+		for (int j=0; j<nInd; j++)
+			matFuncCob[i][j] = invHyp[i][j];
+		for (int j=0; j<nParam+1; j++)
+			matFuncCob[i][nInd+j] = 0;
+	}
+	affFuncMPP* funcCob = buildAffineFunction(matFuncCob, nInd, nInd, nParam);
+
+	polyhedronMPP* polyCoB = changeOfBasis(polyScalar, funcCob);
+
+	
+	// 2) Partitioning
+	list<list<polyhedronMPP*> > llpolyTiled = getRectangularTiledDomain(polyCoB, scale, option);
+
+
+	// 3) Going back to the original space, using function (funcCob^{-1}, funcCob^{-1})
+	int nColmatFuncCobTiled = 2*nInd + 2*nParam + 1;
+	int64** matFuncCobTiled = (int64**) malloc(2*nInd * sizeof(int64*));
+	for (int i=0; i<2*nInd; i++)
+		matFuncCobTiled[i] = (int64*) malloc(nColmatFuncCobTiled * sizeof(int64));
+	for (int i=0; i<nInd; i++) {
+		for (int j=0; j<nInd; j++)
+			matFuncCobTiled[i][j] = hyperplanes[i][j];
+		for (int j=0; j<nInd+2*nParam+1; j++)
+			matFuncCobTiled[i][nInd+j] = 0;
+	}
+	for (int i=0; i<nInd; i++) {
+		for (int j=0; j<nInd; j++)
+			matFuncCobTiled[nInd+i][j] = 0;
+		for (int j=0; j<nInd; j++)
+			matFuncCobTiled[nInd+i][nInd+j] = hyperplanes[i][j];
+		for (int j=0; j<2*nParam+1; j++)
+			matFuncCobTiled[nInd+i][2*nInd+j] = 0;
+	}
+	affFuncMPP* funcCobTiled = buildAffineFunction(matFuncCobTiled, 2*nInd, 2*nInd, 2*nParam);
+
+	// Change on basis on all polyhedra of the intersection of the union
+	list<list<polyhedronMPP*> > llpolyRet;
+	for (list<list<polyhedronMPP*> >::iterator lpolyTiled=llpolyTiled.begin();
+			lpolyTiled!=llpolyTiled.end(); lpolyTiled++) {
+		list<polyhedronMPP*> lpolyRet;
+
+		for (list<polyhedronMPP*>::iterator polyTiled = lpolyTiled->begin();
+				polyTiled!=lpolyTiled->end(); polyTiled++) {
+			polyhedronMPP* polyRet = changeOfBasis(*polyTiled, funcCobTiled);
+			lpolyRet.push_back(polyRet);
+
+			freePolyhedron(*polyTiled);
+		}
+		llpolyRet.push_back(lpolyRet);
+	}
+
+
+	// Free internal structure
+	freeMatrix(invHypRat, nInd);
+	freeMatrix(invHyp, nInd);
+	freeAffineFunction(funcCob);
+	freeAffineFunction(funcCobTiled);
+
+	return llpolyRet;
+}
+
+
+
+
