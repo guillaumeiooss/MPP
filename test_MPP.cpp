@@ -70,7 +70,6 @@ void test_MPP_Poly_Ex1() {
 	//( 1 |  0  0 |  0 -1 | 0 0 | 1 | -1 )
 	//( 1 |  0  0 |  0  0 | 0 0 | 1 | -3 )
 	//		=> {alpha,beta, ii,jj | alpha+beta<=Nbl-2 && 0<=(ii,jj)<b && b>=3}
-
 }
 
 
@@ -661,7 +660,6 @@ void test_MPP_Gen_Func_Ex1() {
 	printoutFunction(resultFunc);
 	
 	// TODO: finish to check these values
-	
 }
 
 void test_MPP_Gen_Func_Ex2() {
@@ -703,8 +701,6 @@ void test_MPP_Gen_Func_Ex2() {
 	//		=> vient de kIm_max_1 (dont la seconde dimension devrait rester constant et égal à 0)
 	
 	// TODO: manque la condition "i_b est pair / impaire" pour guarantir que la valeur reste entière
-	
-	
 }
 
 /* ------------------------------------------ */
@@ -742,9 +738,44 @@ void debug_MPP_Gen_Poly_1() {
 	
 	list<list<polyhedronMPP*> > resultDom = getTiledDomain(polyScalar, shape, lattice, opt);
 	printoutDomain(resultDom);
-
 }
 
+void debug_MPP_Gen_Func_1() {
+	// Example from Christophe
+	int nInd = 2;
+	int nParam = 2;
+	int dimOut = 2;
+
+	// Affine function: (t, i -> t-1, i-1)
+	int64** mat = (int64**) malloc(dimOut * sizeof(int64*));
+	for (int i=0; i<dimOut; i++)
+		mat[i] = (int64*) malloc((nInd+nParam+1)* sizeof(int64));
+	mat[0][0] = 1; mat[0][1] = 0; mat[0][2] = 0; mat[0][3] = 0; mat[0][4] = -1;
+	mat[1][0] = 0; mat[1][1] = 1; mat[1][2] = 0; mat[1][3] = 0; mat[1][4] = -1;
+	affFuncMPP *affScalar = buildAffineFunction(mat, dimOut, nInd, nParam);
+
+	// Input space partitioning: b*b square tiles
+	int64* scaleIn = (int64*) malloc(nInd*sizeof(int64));
+	scaleIn[0] = 1; scaleIn[1] = 1;
+	polyhedronMPP *shapeIn = rectangularShape(scaleIn, 2);
+	int64** latticeIn = rectangularOriginLattice(scaleIn, 2);
+
+	// Output space partitioning: b*b square tiles
+	int64* scaleOut  = (int64*) malloc(dimOut*sizeof(int64));
+	scaleOut[0] = 1; scaleOut[1] = 1;
+	polyhedronMPP *shapeOut = rectangularShape(scaleOut, 2);
+	int64** latticeOut = rectangularOriginLattice(scaleOut, 2);
+
+	optionMPP* opt = (optionMPP*) malloc(sizeof(optionMPP));
+	opt->kMinMaxOption = 0;
+	opt->areParamDiv = false;
+	opt->minBlSizeParam = 3;
+	
+	map<polyhedronMPP*, affFuncMPP*> resultFunc = getTiledFunction(affScalar,
+			shapeIn, latticeIn, shapeOut, latticeOut, opt);
+
+	printoutFunction(resultFunc);
+}
 
 
 /* ------------------------------------------ */
@@ -775,7 +806,9 @@ int main() {
 	
 
 	// DEBUG
-	debug_MPP_Gen_Poly_1();
+	//debug_MPP_Gen_Poly_1();
+	debug_MPP_Gen_Func_1();
+
 
 	return 0;
 }
