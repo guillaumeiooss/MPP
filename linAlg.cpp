@@ -407,6 +407,16 @@ void printMatrix(rational64** mat, int nRow, int nCol) {
 	return;
 }
 
+
+void printVector(rational64* vect, int nElem) {
+	cout << "[ ";
+	for (int j=0; j<nElem; j++) {
+		cout << vect[j].num << "/" << vect[j].den << " ";
+	}
+	cout << "]" << endl;
+	return;
+}
+
 void freeMatrix(rational64** mat, int nRow) {
 	for (int i=0; i<nRow; i++)
 		free(mat[i]);

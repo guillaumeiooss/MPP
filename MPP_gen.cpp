@@ -1355,7 +1355,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		// [\epsilon | Id  |     0     | 0 |     0     |     0     |      -\alpha       ]		// i_b = \alpha mod \epsilon
 		// [\epsilon'| Id  |     0     | 0 |     0     |     0     |      -\alpha'      ]		// i'_b = \alpha' mod \epsilon'
 		// where:
-		//		* X = shparIm + shlinIm(QLDinv.\alpha - LinvDIm.\alpha'+k'-k)
+		//		* X = shparIm + shlinIm.(QLDinv.\alpha - LDinvIm.\alpha'+k'-k)
 		//		
 		// First column: 0=equality / 1 = inequality
 		// \alpha = blocked index parameter / ii = local index parameter
@@ -1388,17 +1388,22 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		int64** shlinImQ = matrixMultiplication(linPart_shapeIm, nConstr_shapeIm, nDimOut, linPart, nDimOut, nInd);
 		int64** shlinImR = matrixMultiplication(linPart_shapeIm, nConstr_shapeIm, nDimOut, paramPart, nDimOut, nParam);
 		
-		// tempVectb = QLDinv.\alpha - LinvDIm.\alpha'+k'-k
+		// tempVectb = QLDinv.\alpha - LDinvIm.\alpha'+k'-k
 		rational64* tempVectb = (rational64*) malloc(nDimOut * sizeof(rational64));
 		for (int i=0; i<nDimOut; i++) {
 			rational64 temp; temp.num = kImCurr[i] - kCurr[i]; temp.den = 1;
 			tempVectb[i] = temp;
 		}
 		rational64* QLDinvalpha = matVectProduct(QLDinv, nDimOut, nInd, ratAlpha, nInd);
-		rational64* LinvDImAlphaIm = matVectProduct(LinvDIm, nDimOut, nDimOut, ratAlphaIm, nInd);
+		rational64* LDinvImAlphaIm = matVectProduct(LDinvIm, nDimOut, nDimOut, ratAlphaIm, nInd);
 		for (int i=0; i<nDimOut; i++)
-			tempVectb[i] = addRational(tempVectb[i], subRational(QLDinvalpha[i], LinvDImAlphaIm[i]));
-		free(LinvDImAlphaIm);
+			tempVectb[i] = addRational(tempVectb[i], subRational(QLDinvalpha[i], LDinvImAlphaIm[i]));
+		free(LDinvImAlphaIm);
+
+		/* DEBUG
+		cout << "tempVectb = " << endl;
+		printVector(tempVectb, nDimOut);
+		//*/
 		
 		// (Second rows)
 		for (int i=0; i<nConstr_shapeIm; i++) {
@@ -1421,7 +1426,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			
 			inputConstrLongMat[nConstr_shape+i][1+2*nInd+2*nParam] = tempRatb.num;						// b
 			
-			int64 shlinImq = dotProduct(constPart_shape, nDimOut, constPart, nDimOut);					// Const
+			int64 shlinImq = dotProduct(linPart_shape[i], nDimOut, constPart, nDimOut);					// Const
 			inputConstrLongMat[nConstr_shape+i][nCol_blConstr-1] = (constPart_shapeIm[i] + shlinImq) * tempRatb.den;
 		}
 		
@@ -1468,7 +1473,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		// (Fifth rows)
 		int offset_5r = nConstr_shape + nConstr_shapeIm + 2*nDimOut;
 		if (epsilon==1) {		// No constraint => fill this part of the array with "0=0"
-			// Nothing (already initialized with 0s)
+			// Nothing (no constrants / rows not even allocated)
 		} else {
 			for (int i=0; i<nInd; i++) {
 				inputConstrLongMat[offset_5r+i][0] = epsilon;								// Eq/Ineq
@@ -1481,7 +1486,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		// (Sixth rows)
 		int offset_6r = offset_5r + ((epsilon==1)?0:nInd);
 		if (epsilonIm==1) {		// No constraint => fill this part of the array with "0=0"
-			// Nothing (already initialized with 0s)
+			// Nothing (no constrants / rows not even allocated)
 		} else {
 			for (int i=0; i<nDimOut; i++) {
 				rational64* tempRatRow = (rational64*) malloc(nCol_blConstr * sizeof(rational64));

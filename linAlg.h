@@ -88,6 +88,8 @@ rational64* toRationalVector(int64* vect, int nElem);
 // Pretty-printer
 void printMatrix(rational64** mat, int nRow, int nCol);
 
+void printVector(rational64* vect, int nElem);
+
 // Free a matrix
 void freeMatrix(rational64** mat, int nRow);
 
