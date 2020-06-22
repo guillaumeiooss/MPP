@@ -899,8 +899,8 @@ void get_kmaxkmin_func(long* kmax, long* kmin, long* kImmax, long* kImmin,
 			}
 		}
 		
-		kIm_max_2[c] = ((double) tempMax.num) / ((double) tempMax.den);
-		kIm_min_2[c] = ((double) tempMin.num) / ((double) tempMin.den);
+		k_max_2[c] = ((double) tempMax.num) / ((double) tempMax.den);
+		k_min_2[c] = ((double) tempMin.num) / ((double) tempMin.den);
 	}
 	
 	// Free temporary structure
