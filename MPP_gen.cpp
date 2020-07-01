@@ -1311,9 +1311,9 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 
 	
 	// DEBUG
-	cout << "gcdkminkIm = ";
-	printVector(gcdkminkIm, nDimOut);
-	cout << endl;
+	//cout << "gcdkminkIm = ";
+	//printVector(gcdkminkIm, nDimOut);
+	//cout << endl;
 	
 	// Level 1 of iteration: kCurr
 	for (int i=0; i<nDimOut; i++)
@@ -1341,7 +1341,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	}
 
 
-	//* DEBUG
+	/* DEBUG
 	cout << "Branch [k, kIm] =" << endl;
 	cout << "\t [ ";
 	printVector(kCurr, nDimOut);
