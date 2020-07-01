@@ -462,6 +462,19 @@ rational64 dotProduct(rational64* vect1, rational64* vect2, int nElem) {
 }
 
 
+rational64** matScalProduct(rational64** mat, int nRow, int nCol, rational64 elem) {	
+	rational64** matRet = (rational64**) malloc(nRow * sizeof(rational64*));
+	for (int i=0; i<nRow; i++)
+		matRet[i] = (rational64*) malloc(nCol * sizeof(rational64));
+
+	for (int i=0; i<nRow; i++)
+		for (int j=0; j<nCol; j++)
+			matRet[i][j] = multiplyRational(elem, mat[i][j]);
+
+	return matRet;
+}
+
+
 rational64* matVectProduct(rational64** mat, int nRow, int nCol, rational64* vect, int nElem) {
 	assert(nCol==nElem);
 	

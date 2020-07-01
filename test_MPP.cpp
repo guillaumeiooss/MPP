@@ -746,12 +746,12 @@ void debug_MPP_Gen_Func_1() {
 	int nParam = 2;
 	int dimOut = 2;
 
-	// Affine function: (t, i -> t-1, i-1)
+	// Affine function: (t, i -> t-1, i+1)
 	int64** mat = (int64**) malloc(dimOut * sizeof(int64*));
 	for (int i=0; i<dimOut; i++)
 		mat[i] = (int64*) malloc((nInd+nParam+1)* sizeof(int64));
 	mat[0][0] = 1; mat[0][1] = 0; mat[0][2] = 0; mat[0][3] = 0; mat[0][4] = -1;
-	mat[1][0] = 0; mat[1][1] = 1; mat[1][2] = 0; mat[1][3] = 0; mat[1][4] = -1;
+	mat[1][0] = 0; mat[1][1] = 1; mat[1][2] = 0; mat[1][3] = 0; mat[1][4] = 1;
 	affFuncMPP *affScalar = buildAffineFunction(mat, dimOut, nInd, nParam);
 
 	// Input space partitioning: b*b square tiles
@@ -775,7 +775,169 @@ void debug_MPP_Gen_Func_1() {
 			shapeIn, latticeIn, shapeOut, latticeOut, opt);
 
 	printoutFunction(resultFunc);
+
+	// RESULT: 4 branches:
+	// 1) IF
+	//(0/1 | tb ib | tl il | Nb Mb | Nl Ml | b | cnst)    // 0 = equality / 1 = inequality
+	//( 1 | 0 0 |  1  0 | 0 0 | 0 0 | 0 |  0 )     0 <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 | 0 0 | 0 |  0 )     0 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 | 0 0 | 1 | -1 )          tl <= b-1
+	//( 1 | 0 0 |  0 -1 | 0 0 | 0 0 | 1 | -1 )          il <= b-1
+	//( 1 | 0 0 |  1  0 | 0 0 | 0 0 | 1 | -1 )   1-b <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 | 0 0 | 0 |  1 )    -1 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 | 0 0 | 0 |  0 )          tl <= 0
+	//( 1 | 0 0 |  0 -1 | 0 0 | 0 0 | 1 | -2 )          il <= b-2
+	//( 1 | 0 0 |  1  0 | 0 0 | 0 0 | 1 | -1 )   1-b <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 | 0 0 | 0 |  1 )    -1 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 | 0 0 | 0 |  1 )          tl <= 1
+	//( 1 | 0 0 |  0 -1 | 0 0 | 0 0 | 1 | -1 )          il <= b-1
+	// THEN
+	//( tb ib | tl il | Nb Mb | Nl Ml | b | cnst)
+	//( 1 0 | 0 0 | 0 0 | 0 0 | 0 | -1 )
+	//( 0 1 | 0 0 | 0 0 | 0 0 | 0 |  0 )
+	//( 0 0 | 1 0 | 0 0 | 0 0 | 1 | -1 )
+	//( 0 0 | 0 1 | 0 0 | 0 0 | 0 |  1 )
+	//	=> IF (tl==0 && il<=b-2) THEN (tb-1, ib, tl+b-1, il+1)
+	//
+	// 2) IF
+	//(0/1 | tb ib | tl il | Nb Mb | Nl Ml | b | cnst)    // 0 = equality / 1 = inequality
+	//( 1 | 0 0 |  1  0 | 0 0 0 0 | 0 |  0 )     0 <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 0 0 | 0 |  0 )     0 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 0 0 | 1 | -1 )          tl <= b-1
+	//( 1 | 0 0 |  0 -1 | 0 0 0 0 | 1 | -1 )          il <= b-1
+	//( 1 | 0 0 |  1  0 | 0 0 0 0 | 0 | -1 )     1 <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 0 0 | 0 |  1 )    -1 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 0 0 | 1 |  0 )          tl <= b
+	//( 1 | 0 0 |  0 -1 | 0 0 0 0 | 1 | -2 )          il <= b-2
+	//( 1 | 0 0 |  1  0 | 0 0 0 0 | 0 | -1 )     1 <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 0 0 | 0 |  1 )    -1 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 0 0 | 1 |  1 )          tl <= b+1
+	//( 1 | 0 0 |  0 -1 | 0 0 0 0 | 1 | -1 )          il <= b-1
+	// THEN
+	//( tb ib | tl il | Nb Mb | Nl Ml | b | cnst)
+	//( 1 0 | 0 0 | 0 0 0 0 | 0 |  0 )
+	//( 0 1 | 0 0 | 0 0 0 0 | 0 |  0 )
+	//( 0 0 | 1 0 | 0 0 0 0 | 0 | -1 )
+	//( 0 0 | 0 1 | 0 0 0 0 | 0 |  1 )
+	//  => IF (1<=tl && il<=b-2) THEN (tb, ib, tl-1, il+1)
+	//
+	// 3) IF
+	//(0/1 | tb ib | tl il | Nb Mb | Nl Ml | b | cnst)    // 0 = equality / 1 = inequality
+	//( 1 | 0 0 |  1  0 | 0 0 0 0 |  0 |  0 )     0 <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 0 0 |  0 |  0 )     0 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 0 0 |  1 | -1 )          tl <= b-1
+	//( 1 | 0 0 |  0 -1 | 0 0 0 0 |  1 | -1 )          il <= b-1
+	//( 1 | 0 0 |  1  0 | 0 0 0 0 |  1 | -1 )   1-b <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 0 0 | -1 |  1 )   b-1 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 0 0 |  0 |  0 )          tl <= 0
+	//( 1 | 0 0 |  0 -1 | 0 0 0 0 |  2 | -2 )          il <= 2b-2
+	//( 1 | 0 0 |  1  0 | 0 0 0 0 |  1 | -1 )   1-b <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 0 0 | -1 |  1 )   b-1 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 0 0 |  0 |  1 )          tl <= 1
+	//( 1 | 0 0 |  0 -1 | 0 0 0 0 |  2 | -1 )          il <= 2b-1
+	// THEN
+	//( tb ib | tl il | Nb Mb | Nl Ml | b | cnst)
+	//( 1 0 | 0 0 | 0 0 0 0 |  0 | -1 )
+	//( 0 1 | 0 0 | 0 0 0 0 |  0 |  1 )
+	//( 0 0 | 1 0 | 0 0 0 0 |  1 | -1 )
+	//( 0 0 | 0 1 | 0 0 0 0 | -1 |  1 )
+	//  => IF (tl==0 && il==b-1) THEN (tb-1, ib+1, tl+b-1, il-b+1)
+	//
+	// 4) IF
+	//(0/1 | tb ib | tl il | Nb Mb | Nl Ml | b | cnst)    // 0 = equality / 1 = inequality
+	//( 1 | 0 0 |  1  0 | 0 0 0 0 |  0 |  0 )     0 <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 0 0 |  0 |  0 )     0 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 0 0 |  1 | -1 )          tl <= b-1
+	//( 1 | 0 0 |  0 -1 | 0 0 0 0 |  1 | -1 )          il <= b-1
+	//( 1 | 0 0 |  1  0 | 0 0 0 0 |  0 | -1 )     1 <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 0 0 | -1 |  1 )   b-1 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 0 0 |  1 |  0 )          tl <= b
+	//( 1 | 0 0 |  0 -1 | 0 0 0 0 |  2 | -2 )          il <= 2b-2
+	//( 1 | 0 0 |  1  0 | 0 0 0 0 |  0 | -1 )     1 <= tl
+	//( 1 | 0 0 |  0  1 | 0 0 0 0 | -1 |  1 )   b-1 <= il
+	//( 1 | 0 0 | -1  0 | 0 0 0 0 |  1 |  1 )          tl <= b+1
+	//( 1 | 0 0 |  0 -1 | 0 0 0 0 |  2 | -1 )          il <= 2b-1
+	// THEN
+	//( tb ib | tl il | Nb Mb | Nl Ml | b | cnst)
+	//( 1 0 | 0 0 | 0 0 0 0 |  0 |  0 )
+	//( 0 1 | 0 0 | 0 0 0 0 |  0 |  1 )
+	//( 0 0 | 1 0 | 0 0 0 0 |  0 | -1 )
+	//( 0 0 | 0 1 | 0 0 0 0 | -1 |  1 )
+	//  => IF (1<=tl && il==b-1) THEN (tb, ib+1, tl-1, il-b+1)
 }
+
+void debug_MPP_Gen_Func_2() {
+	// Example from Christophe
+	int nInd = 2;
+	int nParam = 0;
+	int dimOut = 2;
+
+	// Affine function: (t, i -> t-1, i)
+	int64** mat = (int64**) malloc(dimOut * sizeof(int64*));
+	for (int i=0; i<dimOut; i++)
+		mat[i] = (int64*) malloc((nInd+nParam+1)* sizeof(int64));
+	mat[0][0] = 1; mat[0][1] = 0; mat[0][2] = -1;
+	mat[1][0] = 0; mat[1][1] = 1; mat[1][2] = 0;
+	affFuncMPP *affScalar = buildAffineFunction(mat, dimOut, nInd, nParam);
+
+	// Input space partitioning: Hexagonal
+	int nConstrHexIn = 6;
+	int nCol_matHexIn = 2 + nInd + 1;
+	int64** matHexIn = (int64**) malloc(nConstrHexIn * sizeof(int64*));
+	for (int i=0; i<nConstrHexIn; i++)
+		matHexIn[i] = (int64*) malloc(nCol_matHexIn * sizeof(int64));
+	matHexIn[0][0] = 1; matHexIn[0][1] = -1; matHexIn[0][2] =  1; matHexIn[0][3] =  4; matHexIn[0][4] = -1;	// (0<=-ii+jj+4b-1)
+	matHexIn[1][0] = 1; matHexIn[1][1] =  1; matHexIn[1][2] = -1; matHexIn[1][3] =  0; matHexIn[1][4] =  0;	// (0<=ii-jj)
+	matHexIn[2][0] = 1; matHexIn[2][1] =  0; matHexIn[2][2] =  1; matHexIn[2][3] =  1; matHexIn[2][4] =  0;	// (0<=jj+b)
+	matHexIn[3][0] = 1; matHexIn[3][1] =  0; matHexIn[3][2] = -1; matHexIn[3][3] =  1; matHexIn[3][4] = -1;	// (0<=b-jj-1)
+	matHexIn[4][0] = 1; matHexIn[4][1] =  1; matHexIn[4][2] =  1; matHexIn[4][3] =  0; matHexIn[4][4] =  0;	// (0<=ii+jj)
+	matHexIn[5][0] = 1; matHexIn[5][1] = -1; matHexIn[5][2] = -1; matHexIn[5][3] =  4; matHexIn[5][4] = -1;	// (0<=4b-ii-jj-1)
+	polyhedronMPP* shapeIn = buildPolyhedron(matHexIn, nConstrHexIn, nInd, 1);
+
+
+	int64** latticeIn = (int64**) malloc((nInd+1) * sizeof(int64*));
+	for (int i=0; i<nInd+1; i++)
+		latticeIn[i] = (int64*) malloc(nInd * sizeof(int64));
+	latticeIn[0][0] = 1; latticeIn[0][1] =  0;
+	latticeIn[1][0] = -3; latticeIn[1][1] = 6;
+	latticeIn[2][0] = 1; latticeIn[2][1] =  1;
+
+	// Output space partitioning: Hexagonal
+	int nConstrHexOut = 6;
+	int nCol_matHexOut = 2 + dimOut + 1;
+	int64** matHexOut = (int64**) malloc(nConstrHexOut * sizeof(int64*));
+	for (int i=0; i<nConstrHexOut; i++)
+		matHexOut[i] = (int64*) malloc(nCol_matHexOut * sizeof(int64));
+	matHexOut[0][0] = 1; matHexOut[0][1] = -1; matHexOut[0][2] =  1; matHexOut[0][3] =  4; matHexOut[0][4] = -1;	// (0<=-ii+jj+4b-1)
+	matHexOut[1][0] = 1; matHexOut[1][1] =  1; matHexOut[1][2] = -1; matHexOut[1][3] =  0; matHexOut[1][4] =  0;	// (0<=ii-jj)
+	matHexOut[2][0] = 1; matHexOut[2][1] =  0; matHexOut[2][2] =  1; matHexOut[2][3] =  1; matHexOut[2][4] =  0;	// (0<=jj+b)
+	matHexOut[3][0] = 1; matHexOut[3][1] =  0; matHexOut[3][2] = -1; matHexOut[3][3] =  1; matHexOut[3][4] = -1;	// (0<=b-jj-1)
+	matHexOut[4][0] = 1; matHexOut[4][1] =  1; matHexOut[4][2] =  1; matHexOut[4][3] =  0; matHexOut[4][4] =  0;	// (0<=ii+jj)
+	matHexOut[5][0] = 1; matHexOut[5][1] = -1; matHexOut[5][2] = -1; matHexOut[5][3] =  4; matHexOut[5][4] = -1;	// (0<=4b-ii-jj-1)
+	polyhedronMPP* shapeOut = buildPolyhedron(matHexOut, nConstrHexOut, dimOut, 1);
+	
+	// Lattice of tile origin - basis is: (3b, b), (3b, -b)
+	int64** latticeOut = (int64**) malloc((dimOut+1) * sizeof(int64*));
+	for (int i=0; i<dimOut+1; i++)
+		latticeOut[i] = (int64*) malloc(dimOut * sizeof(int64));
+	latticeOut[0][0] = 1; latticeOut[0][1] =  0;
+	latticeOut[1][0] = -3; latticeOut[1][1] = 6;
+	latticeOut[2][0] = 1; latticeOut[2][1] =  1;
+
+	optionMPP* opt = (optionMPP*) malloc(sizeof(optionMPP));
+	opt->kMinMaxOption = 0;
+	opt->areParamDiv = false;
+	opt->minBlSizeParam = 3;
+	
+	map<polyhedronMPP*, affFuncMPP*> resultFunc = getTiledFunction(affScalar,
+			shapeIn, latticeIn, shapeOut, latticeOut, opt);
+
+	printoutFunction(resultFunc);
+
+	// TODO: 40 branches... :/
+
+}
+
 
 
 /* ------------------------------------------ */
@@ -802,13 +964,10 @@ int main() {
 	//test_MPP_Gen_Func_Ex1();
 	//test_MPP_Gen_Func_Ex2();
 	
-	// TODO: other test for the general case
-	
-
 	// DEBUG
 	//debug_MPP_Gen_Poly_1();
-	debug_MPP_Gen_Func_1();
-
+	//debug_MPP_Gen_Func_1();
+	debug_MPP_Gen_Func_2();
 
 	return 0;
 }

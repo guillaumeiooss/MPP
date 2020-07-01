@@ -102,6 +102,9 @@ int64** toIntegralMatrix(rational64** ratmat, int nRow, int nCol);
 // Dot product between two rational vectors
 rational64 dotProduct(rational64* vect1, rational64* vect2, int nElem);
 
+// Matrix-scalar product
+rational64** matScalProduct(rational64** mat, int nRow, int nCol, rational64 elem);
+
 // Matrix-vector product
 rational64* matVectProduct(rational64** mat, int nRow, int nCol, rational64* vect, int nElem);
 

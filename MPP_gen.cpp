@@ -1248,28 +1248,72 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	//	=> By looking at the gcd of the whole equation, we can constraint (\vec{k} - \vec{k'})
 	// Note: gcdkminkIm must be a vector of strictly positive elements
 	int64* gcdkminkIm = (int64*) malloc(nDimOut * sizeof(int64));
-	for (int i=0; i<nDimOut; i++)		// Init/default case (for debugging/ignoring this optim)
-		gcdkminkIm[i] = 1;
+	//for (int i=0; i<nDimOut; i++)		// Init/default case (for debugging/ignoring this optim)
+	//	gcdkminkIm[i] = 1;
 	
-	// TODO: redo that
-	/*for (int i=0; i<nDimOut; i++) {
-		// Gcd of \delta', R[i][*] and \delta.Q[i][*]
-		int64 tempGcd = deltaIm;
+	// Preparation: compute \epsilon.Q.LDinv and \epsilon'.LDinvIm
+	//		=> They MUST be integral by definition (checking that...)
+	rational64** epsQLDinv_rat = matScalProduct(QLDinv, nDimOut, nInd, toRational(epsilon));
+	int64** epsQLDinv = toIntegralMatrix(epsQLDinv_rat, nDimOut, nInd);
+	freeMatrix(epsQLDinv_rat, nDimOut);
+
+	rational64** epsLDinvIm_rat = matScalProduct(LDinvIm, nDimOut, nDimOut, toRational(epsilonIm));
+	int64** epsLDinvIm = toIntegralMatrix(epsLDinvIm_rat, nDimOut, nDimOut);
+	freeMatrix(epsLDinvIm_rat, nDimOut);
+
+	for (int i=0; i<nDimOut; i++) {
+		// Gcd of \epsilon'.LDinvIm[i][*], R[i][*] and \epsilon.Q.LDinv[i][*]
+
+		// Find the first zero element for initializing the gcd
+		bool firstzero = false;
+		int64 tempGcd = 0;
+		for (int j=0; j<nParam; j++)
+			if (paramPart[i][j]!=0) {
+				firstzero = true;
+				tempGcd = paramPart[i][j];
+				break;
+			}
+		if (not firstzero) {
+			for (int j=0; j<nInd; j++)
+				if (epsQLDinv[i][j]!=0) {
+					firstzero = true;
+					tempGcd = epsQLDinv[i][j];
+					break;
+				}
+		}
+		if (not firstzero) {
+			for (int j=0; j<nDimOut; j++)
+				if (epsLDinvIm[i][j]!=0) {
+					firstzero = true;
+					tempGcd = epsLDinvIm[i][j];
+					break;
+				}
+		}
+		if (not firstzero) {  // Everybody is zero on this row => gcd does not matter...
+			tempGcd = 1;
+		}
+
 		for (int j=0; j<nParam; j++)
 			if (paramPart[i][j]!=0)
 				tempGcd = gcd(tempGcd, paramPart[i][j]);
 		for (int j=0; j<nInd; j++)
-			if (linPart[i][j]!=0)
-				tempGcd = gcd(tempGcd, delta * linPart[i][j]);
-		
+			if (epsQLDinv[i][j]!=0)
+				tempGcd = gcd(tempGcd, epsQLDinv[i][j]);
+		for (int j=0; j<nDimOut; j++)
+			if (epsLDinvIm[i][j]!=0)
+				tempGcd = gcd(tempGcd, epsLDinvIm[i][j]);
 		gcdkminkIm[i] = tempGcd;
-	} */
-	// TODO: end redo
+	}
+
+	// Clean up temporary matrices
+	freeMatrix(epsQLDinv, nDimOut);
+	freeMatrix(epsLDinvIm, nDimOut);
+
 	
-	//cout << "gcdkminkIm = ";
-	//printVector(gcdkminkIm, nDimOut);
-	//cout << endl;
-	
+	// DEBUG
+	cout << "gcdkminkIm = ";
+	printVector(gcdkminkIm, nDimOut);
+	cout << endl;
 	
 	// Level 1 of iteration: kCurr
 	for (int i=0; i<nDimOut; i++)
@@ -1295,6 +1339,22 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		if (mod!=0)
 			skipkminkIm = true;
 	}
+
+
+	//* DEBUG
+	cout << "Branch [k, kIm] =" << endl;
+	cout << "\t [ ";
+	printVector(kCurr, nDimOut);
+	cout << "\t   ";
+	printVector(kImCurr, nDimOut);
+	cout << "\t] => ";
+	if (skipkminkIm) {
+		cout << "SKIPPED !" << endl;
+	} else {
+		cout << "Not skipped !" <<endl;
+	}
+	//*/
+
 	if (skipkminkIm) {
 		kImCurr[0]++;
 		for (int i=0; i<nDimOut-1; i++)
@@ -1331,7 +1391,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		printVector(alphaIm, nDimOut);
 		cout << "\t]" << endl;
 		//*/
-		
+
 		
 		// Precomputation of LDinv.\alpha for the second row
 		rational64* ratAlpha = toRationalVector(alpha, nInd);
