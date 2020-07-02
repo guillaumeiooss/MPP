@@ -1309,11 +1309,11 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	freeMatrix(epsQLDinv, nDimOut);
 	freeMatrix(epsLDinvIm, nDimOut);
 
-	
-	// DEBUG
-	//cout << "gcdkminkIm = ";
-	//printVector(gcdkminkIm, nDimOut);
-	//cout << endl;
+	/* DEBUG
+	cout << "gcdkminkIm = ";
+	printVector(gcdkminkIm, nDimOut);
+	cout << endl;
+	//*/
 	
 	// Level 1 of iteration: kCurr
 	for (int i=0; i<nDimOut; i++)
@@ -1485,15 +1485,15 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 				inputConstrLongMat[nConstr_shape+i][1+2*nInd+nParam+j] = tempRatb.den *shlinImR[i][j];	// p_l
 			
 			inputConstrLongMat[nConstr_shape+i][1+2*nInd+2*nParam] = tempRatb.num;						// b
-			
-			int64 shlinImq = dotProduct(linPart_shape[i], nDimOut, constPart, nDimOut);					// Const
+
+			int64 shlinImq = dotProduct(linPart_shapeIm[i], nDimOut, constPart, nDimOut);					// Const
 			inputConstrLongMat[nConstr_shape+i][nCol_blConstr-1] = (constPart_shapeIm[i] + shlinImq) * tempRatb.den;
 		}
 		
 		freeMatrix(shlinImQ, nConstr_shapeIm);
 		freeMatrix(shlinImR, nConstr_shapeIm);
 		free(tempVectb);
-		
+
 		
 		// (Third rows)
 		for (int i=0; i<nDimOut; i++) {
@@ -1594,7 +1594,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		}
 		
 		polyhedronMPP* polyRet = buildPolyhedron(inputConstrLongMat, nRow_blConstr, 2*nInd, 2*nParam+1);
-		
+
 		// The matrix of the affine function is:
 		// 
 		// (      i_b      |i_l|    p_b    |p_l|     b         | const)    <= Row to know which column corresponds to what...
@@ -1717,18 +1717,63 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			free(tempRatRow);
 		}
 		
-		
-		affFuncMPP* affFuncRet = buildRationalAffineFunction(relationConstrLongMat, divConstrLongMat, 2*nDimOut, 2*nInd, 2*nParam+1);
-		simplifyAffFuncMPP(affFuncRet);
-		
-		result.insert ( pair<polyhedronMPP*, affFuncMPP*>(polyRet, affFuncRet) );
-		
 		// Free temporary data structures
 		free(LDinvalpha);
 		free(ratAlpha);
 		free(ratAlphaIm);
-		// End of construction of the branch
-		
+
+		// Second skip criterion: " DLinvImQLDinv . i_b + DLinvImR . p_b
+		//			+ \alpha'-DLinvImQLDinv.\alpha + DLinvIm.(k - k') " must be able to be positive
+		//		(for some value of i_b and p_b)
+		// => Criterion: get common denominator "den" (ppcm) of coeff of i_b and p_b
+		//		d = pgcd(den, DLinvImQLDinv[i][*].num, DLinvImR[i][*].num )
+		//			=> If constant value not a multiple of d, then not satisfiable
+		// ===> Check the first nDimOut rows of "relationConstrLongMat" where most of the work
+		//		was already done (common den is in: "divConstrLongMat")
+		bool isSatisfiable = true;
+		for (int i=0; i<nDimOut; i++) {
+			int tempGcd = divConstrLongMat[i];
+			// Gcd of the whole row, except the constant term
+			tempGcd = gcd_array(relationConstrLongMat[i], nColumn_relConstr-1);
+
+			int cstTerm = relationConstrLongMat[i][nColumn_relConstr-1];
+
+			// Criterion: does tempGcd divides cstTerm ?
+			// I.e., does gcd(tempGcd, cstTerm) = tempGcd
+			int res = gcd(tempGcd, cstTerm);
+
+			// DEBUG
+			//cout << "tempGcd = " << tempGcd << endl;
+			//cout << "cstTerm = " << cstTerm << endl;
+			//cout << "res = " << res << endl;
+
+			if (res!=tempGcd) {
+				isSatisfiable = false;
+				break;
+			}
+		}
+
+		/* DEBUG
+		if (not isSatisfiable)
+			cout << "Second skip criterion : NOT PASSED" << endl;
+		//*/
+
+		if (not isSatisfiable) {
+			// Do not add this branch to the result
+
+			// Clean up a bit before continuing to the next iteration
+			freeMatrix(relationConstrLongMat, nRow_relConstr);
+			free(divConstrLongMat);
+			freePolyhedron(polyRet);
+		} else {
+			// Branch satisfiable => We add it to the result
+			affFuncMPP* affFuncRet = buildRationalAffineFunction(relationConstrLongMat, divConstrLongMat, 2*nDimOut, 2*nInd, 2*nParam+1);
+			simplifyAffFuncMPP(affFuncRet);
+			
+			result.insert ( pair<polyhedronMPP*, affFuncMPP*>(polyRet, affFuncRet) );
+			// End of construction of the branch
+		}
+
 		
 		// "alphaIm++", with overflow propagation
 		alphaIm[0]++;
