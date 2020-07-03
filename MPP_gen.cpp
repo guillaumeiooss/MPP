@@ -1244,6 +1244,8 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 	int64* alpha = (int64*) malloc(nInd * sizeof(int64));
 	int64* alphaIm = (int64*) malloc(nDimOut * sizeof(int64));
 	
+
+	// CRITERION 1
 	// We have \epsilon'.LDinvIm.\vec{\lambda'} + \vec{k'} = \epsilon.Q.LDinv.\vec{\lambda} + R.\vec{p_b} + \vec{k}
 	//	=> By looking at the gcd of the whole equation, we can constraint (\vec{k} - \vec{k'})
 	// Note: gcdkminkIm must be a vector of strictly positive elements
@@ -1411,7 +1413,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 		// [ shEq    |  0  |   shlin   | 0 |     0     |   shpar   |       sh_const     ]		// i_l \in shape
 		// [ shEqIm  |  0  | shlinIm.Q | 0 | shlinIm.R |     X     | shconstIm+shlinIm.q]		// i'_l \in shapeIm
 		// [   1     |  0  |     Q     | 0 |     R     | Q.L.D^{-1}.\alpha-k   |   q    ]		// def of k/k'
-		// [   1     |  0  |    -Q     | 0 |    -R     | k+1-Q.L.D^{-1}.\alpha|  -q     ]		// def of k/k'
+		// [   1     |  0  |    -Q     | 0 |    -R     | k+1-Q.L.D^{-1}.\alpha|  -q-1   ]		// def of k/k'
 		// [\epsilon | Id  |     0     | 0 |     0     |     0     |      -\alpha       ]		// i_b = \alpha mod \epsilon
 		// [\epsilon'| Id  |     0     | 0 |     0     |     0     |      -\alpha'      ]		// i'_b = \alpha' mod \epsilon'
 		// where:
@@ -1526,7 +1528,7 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			for (int j=0; j<nParam; j++)
 				inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][1+2*nInd+nParam+j] = -paramPart[i][j]*tempRatb.den;	// p_l
 			inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][1+2*nInd+2*nParam] = tempRatb.num;						// b
-			inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][nCol_blConstr-1] = - constPart[i] * tempRatb.den;		// Const
+			inputConstrLongMat[nConstr_shape+nConstr_shapeIm+nDimOut+i][nCol_blConstr-1] = - constPart[i] * tempRatb.den - 1;		// Const
 		}
 		free(QLDinvalpha);
 		
@@ -1651,6 +1653,12 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			
 			constElem = addRational(constElem, elemConstkCurr);
 			tempRatRow[nColumn_relConstr-1] = constElem;
+			/* DEBUG
+			cout << "kminuskIm = ";
+			printVector(kminuskIm, nDimOut);
+			cout << "nColumn_relConstr = ";
+			printVector(tempRatRow, nColumn_relConstr); */
+
 			
 			// Divisor management (aka, going back to int64)
 			for (int j=0; j<nColumn_relConstr; j++)
@@ -1770,6 +1778,20 @@ map<polyhedronMPP*, affFuncMPP*> getTiledFunction(affFuncMPP *affScalar,
 			affFuncMPP* affFuncRet = buildRationalAffineFunction(relationConstrLongMat, divConstrLongMat, 2*nDimOut, 2*nInd, 2*nParam+1);
 			simplifyAffFuncMPP(affFuncRet);
 			
+
+			/* DEBUG
+			cout << "Branch [k = ";
+			printVector(kCurr, nDimOut);
+			cout << "\t\tkIm = ";
+			printVector(kImCurr, nDimOut);
+			cout << "\t] => affFuncRet =\n";
+			printAffFuncMPP(affFuncRet);
+			cout << "\t => polyRet =\n";
+			printPolyhedronMPP(polyRet);
+			cout << endl;
+			//*/
+
+
 			result.insert ( pair<polyhedronMPP*, affFuncMPP*>(polyRet, affFuncRet) );
 			// End of construction of the branch
 		}
