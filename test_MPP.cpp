@@ -934,8 +934,12 @@ void debug_MPP_Gen_Func_2() {
 
 	printoutFunction(resultFunc);
 
-	// TODO: 20 branches... :/
-
+	// 14 branches. By looking at the offset of the tiled indexes:
+	// -> 1 on (-1,0) which is EMPTY due to local constraint
+	// -> 1 on (1,1) which is EMPTY due to local constraint
+	// -> 2 on (1,0) : one for tl=il=0 and one for 1<=tl=il<b / function is (tb+1,ib, tl+3b-1, il-b)
+	// -> 2 on (-1,-1) : one EMPTY and one for 1<=tl=(-il)<b
+	// -> 8 on (0,0) : 8 b*b square (or triangle) area covering the tile (while not conflicting with the other branches)
 }
 
 
