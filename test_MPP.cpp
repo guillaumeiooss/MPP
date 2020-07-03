@@ -1,5 +1,5 @@
 // Test of the CART functions
-// Copyright Guillaume Iooss, 2014, All right reserved.
+// Author: Guillaume Iooss.
 
 #include "MPP_rect.h"
 #include "lexmin.h"
@@ -697,10 +697,7 @@ void test_MPP_Gen_Func_Ex2() {
 	
 	printoutFunction(resultFunc);
 	
-	// TODO: half of branches should not exist
-	//		=> vient de kIm_max_1 (dont la seconde dimension devrait rester constant et égal à 0)
-	
-	// TODO: manque la condition "i_b est pair / impaire" pour guarantir que la valeur reste entière
+	// TODO: finish to check these values
 }
 
 /* ------------------------------------------ */

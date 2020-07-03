@@ -668,7 +668,7 @@ map<polyhedronMPP*, affFuncMPP*> getRectangularTiledFunction(affFuncMPP *affScal
 
 
 // Rectangular case with CoB
-list<list<polyhedronMPP*> > getRectangularCoBTiledFunction(polyhedronMPP* polyScalar, int64 **hyperplanes,
+list<list<polyhedronMPP*> > getRectangularCoBTiledDomain(polyhedronMPP* polyScalar, int64 **hyperplanes,
 	int64 *scale, optionMPP* option) {
 
 	int nInd = polyScalar->nInd;
