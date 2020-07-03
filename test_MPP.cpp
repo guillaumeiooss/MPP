@@ -898,9 +898,9 @@ void debug_MPP_Gen_Func_2() {
 	int64** latticeIn = (int64**) malloc((nInd+1) * sizeof(int64*));
 	for (int i=0; i<nInd+1; i++)
 		latticeIn[i] = (int64*) malloc(nInd * sizeof(int64));
-	latticeIn[0][0] = 1; latticeIn[0][1] =  0;
-	latticeIn[1][0] = -3; latticeIn[1][1] = 6;
-	latticeIn[2][0] = 1; latticeIn[2][1] =  1;
+	latticeIn[0][0] = -3; latticeIn[0][1] = 6;
+	latticeIn[1][0] =  1; latticeIn[1][1] = 0;
+	latticeIn[2][0] =  1; latticeIn[2][1] = 1;
 
 	// Output space partitioning: Hexagonal
 	int nConstrHexOut = 6;
@@ -920,9 +920,9 @@ void debug_MPP_Gen_Func_2() {
 	int64** latticeOut = (int64**) malloc((dimOut+1) * sizeof(int64*));
 	for (int i=0; i<dimOut+1; i++)
 		latticeOut[i] = (int64*) malloc(dimOut * sizeof(int64));
-	latticeOut[0][0] = 1; latticeOut[0][1] =  0;
-	latticeOut[1][0] = -3; latticeOut[1][1] = 6;
-	latticeOut[2][0] = 1; latticeOut[2][1] =  1;
+	latticeOut[0][0] = -3; latticeOut[0][1] =  6;
+	latticeOut[1][0] =  1; latticeOut[1][1] =  0;
+	latticeOut[2][0] =  1; latticeOut[2][1] =  1;
 
 	optionMPP* opt = (optionMPP*) malloc(sizeof(optionMPP));
 	opt->kMinMaxOption = 0;
