@@ -659,7 +659,7 @@ void test_MPP_Gen_Func_Ex1() {
 	
 	printoutFunction(resultFunc);
 	
-	// TODO: finish to check these values
+	// TODO: finish to check these values (16 branches)
 }
 
 void test_MPP_Gen_Func_Ex2() {
@@ -698,6 +698,7 @@ void test_MPP_Gen_Func_Ex2() {
 	printoutFunction(resultFunc);
 	
 	// TODO: finish to check these values
+	// 6 branches
 }
 
 /* ------------------------------------------ */
