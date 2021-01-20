@@ -239,7 +239,7 @@ void get_kmaxkmin_poly(long* kmax, long* kmin,
 		kmin[c] = min_final;
 		
 		// DEBUG
-		cout << "min1 = " << min1 << " | min2 = " << min2 << " | min3 = " << min3 << endl << endl;
+		//cout << "min1 = " << min1 << " | min2 = " << min2 << " | min3 = " << min3 << endl << endl;
 		
 		// Free temporary structures
 		freeAffineFunction(obj_func);
